@@ -168,7 +168,6 @@ def getAllHouseFlats(house_dict):
 def getAllHouseResidents(house_dict):
     res_list = []
     flats = getAllHouseFlats(house_dict)
-    print(len(flats))
     for f in flats:
         res_list += f.residents
     return res_list
