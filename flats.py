@@ -21,14 +21,14 @@ class Resident(object):
                                                self.flat_id, self.status_granted_by)
 
     @staticmethod
-    def get_residents_ids(residents_list):
+    def getResidentsIDs(residents_list):
         residents_ids = []
         for r in residents_list:
             residents_ids.append(r.id)
         return residents_ids
 
     @staticmethod
-    def find_by_tg_id(residents_list, tg_id):
+    def findByTgID(residents_list, tg_id):
         for r in residents_list:
             if r.id == tg_id:
                 return r
@@ -63,50 +63,50 @@ class Flat(object):
                                                                         self.up_residents, self.down_residents)
 
     def addResident(self, resident_tg_id):
-        if resident_tg_id not in Resident.get_residents_ids(self.residents):
+        if resident_tg_id not in Resident.getResidentsIDs(self.residents):
             self.residents.append(Resident(resident_tg_id, self.id))
 
     def removeResident(self, resident_tg_id):
-        r = Resident.find_by_tg_id(self.residents, resident_tg_id)
+        r = Resident.findByTgID(self.residents, resident_tg_id)
         if r:
             self.residents.remove(r)
 
-    def get_floor_neighbors(self, flats_in_entrance_list, with_same_flat_residents=False):
+    def getFloorNeighbors(self, flats_in_entrance_list, with_same_flat_residents=False):
         neighbors = []
         for f in flats_in_entrance_list:
             if ((f.id != self.id) or with_same_flat_residents) and (f.floor == self.floor):
                 neighbors += f.residents
         return neighbors
 
-    def get_up_neighbors(self, flats_in_entrance_list):
+    def getUpNeighbors(self, flats_in_entrance_list):
         neighbors = []
         for id in self.up_ids:
-            neighbors += self.find_by_flat_id(flats_in_entrance_list, id).residents
+            neighbors += self.findByFlatID(flats_in_entrance_list, id).residents
         return neighbors
 
-    def get_down_neighbors(self, flats_in_entrance_list):
+    def getDownNeighbors(self, flats_in_entrance_list):
         neighbors = []
         for id in self.down_ids:
-            neighbors += self.find_by_flat_id(flats_in_entrance_list, id).residents
+            neighbors += self.findByFlatID(flats_in_entrance_list, id).residents
         return neighbors
 
 
     @staticmethod
-    def find_by_flat_id(flats_list, flat_id):
+    def findByFlatID(flats_list, flat_id):
         for f in flats_list:
             if flat_id == f.id:
                 return f
         return None
 
     @staticmethod
-    def find_by_person(flats_list, person_tg_id):
+    def findByPerson(flats_list, person_tg_id):
         for f in flats_list:
-            if person_tg_id in Resident.get_residents_ids(f.residents):
+            if person_tg_id in Resident.getResidentsIDs(f.residents):
                 return f
         return None
 
 
-def flats_at_entrance_struct(entrance_id, first_flat, last_flat, first_floor, flats_count, start_counter=0):
+def getFlatsAtEntranceStruct(entrance_id, first_flat, last_flat, first_floor, flats_count, start_counter=0):
     """
     :param entrance_id: entrance for flats id
     :param first_flat: № of first flat in entrance
@@ -136,27 +136,42 @@ def flats_at_entrance_struct(entrance_id, first_flat, last_flat, first_floor, fl
     return flats
 
 
-def halkon_flats_struct():
+def getHalkonFlatsStruct():
     halkon_flats = {1: [], 'v': [], 2: [], 3: [], 4: [], 'k': []}
     '''#1 '''
-    halkon_flats[1] = flats_at_entrance_struct(1, 1, 18, first_floor=3, flats_count=3)
-    Flat.find_by_flat_id(halkon_flats[1], 14).up_ids.append(16)
-    Flat.find_by_flat_id(halkon_flats[1], 16).down_ids.append(14)
+    halkon_flats[1] = getFlatsAtEntranceStruct(1, 1, 18, first_floor=3, flats_count=3)
+    Flat.findByFlatID(halkon_flats[1], 14).up_ids.append(16)
+    Flat.findByFlatID(halkon_flats[1], 16).down_ids.append(14)
     '''#villas '''
-    halkon_flats['v'] = flats_at_entrance_struct('v', 19, 22, first_floor=1, flats_count=4)
+    halkon_flats['v'] = getFlatsAtEntranceStruct('v', 19, 22, first_floor=1, flats_count=4)
 
     '''#2 '''
-    halkon_flats[2] = flats_at_entrance_struct(2, 23, 41, first_floor=2, flats_count=3, start_counter=2)
-    Flat.find_by_flat_id(halkon_flats[2], 41).up_ids.append(56)
+    halkon_flats[2] = getFlatsAtEntranceStruct(2, 23, 41, first_floor=2, flats_count=3, start_counter=2)
+    Flat.findByFlatID(halkon_flats[2], 41).up_ids.append(56)
 
     '''#3 '''
-    halkon_flats[3] = flats_at_entrance_struct(3, 42, 57, first_floor=2, flats_count=2)
-    Flat.find_by_flat_id(halkon_flats[3], 56).down_ids.append(41)
+    halkon_flats[3] = getFlatsAtEntranceStruct(3, 42, 57, first_floor=2, flats_count=2)
+    Flat.findByFlatID(halkon_flats[3], 56).down_ids.append(41)
 
     '''#4 '''
-    halkon_flats[4] = flats_at_entrance_struct(4, 58, 72, first_floor=2, flats_count=2, start_counter=1)
+    halkon_flats[4] = getFlatsAtEntranceStruct(4, 58, 72, first_floor=2, flats_count=2, start_counter=1)
 
     return halkon_flats
+
+def getAllHouseFlats(house_dict):
+    flats_list = []
+    for flats in house_dict.values():
+        flats_list += flats
+    return flats_list
+
+
+def getAllHouseResidents(house_dict):
+    res_list = []
+    flats = getAllHouseFlats(house_dict)
+    print(len(flats))
+    for f in flats:
+        res_list += f.residents
+    return res_list
 
 
 class FlatsTest(unittest.TestCase):
@@ -174,6 +189,6 @@ class FlatsTest(unittest.TestCase):
         self.assertEqual(f.residents, [])
         print(f)
         print('---')
-        for e in halkon_flats_struct().values():
-            for y in e:
-                print(y)
+
+        print(getAllHouseFlats(getHalkonFlatsStruct()))
+        print(getAllHouseResidents(getHalkonFlatsStruct()))
