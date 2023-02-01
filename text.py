@@ -15,3 +15,8 @@ welcome_first = '''Здравствуйте!
 
 ⚠️Изменить номер квартиры после регистрации невозможно ⚠️'''
 enter_flat_number = "Напишите пожалуйста номер Вашей квартиры в ЖК Халькон (числом)"
+make_post = "Дать объявление в @Halkon_SPb"
+get_floor_neighbors = ""
+get_up_neighbors = ""
+get_down_neighbors = ""
+ask_for_approve = ""

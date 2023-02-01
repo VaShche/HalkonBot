@@ -37,6 +37,13 @@ def set_admin(tg_id):
     '''
 
 
+def addButton(markup, text, data=None):
+    if not data:
+        data = text
+    button = tg.types.InlineKeyboardButton(text=text, callback_data=data)
+    markup.add(button)
+
+
 def add_user(tg_id, flat_id):
     print(flat_id)
     # дать ссылку для вступления
@@ -94,12 +101,8 @@ def register_with_number(message):
     if flat and flat_number:
         print("12")
         markup = tg.types.InlineKeyboardMarkup()
-        item1 = tg.types.InlineKeyboardButton(text=TEXT.register_by_number_confirm.format(flat.id),
-                                              callback_data=TEXT.register_by_number_confirm.format(flat.id))
-        item2 = tg.types.InlineKeyboardButton(text=TEXT.register_by_number_cancel,
-                                              callback_data=TEXT.register_by_number_cancel)
-        markup.add(item1)
-        markup.add(item2)
+        addButton(markup, TEXT.register_by_number_confirm.format(flat.id))
+        addButton(markup, TEXT.register_by_number_cancel)
         bot.send_message(tg_id, TEXT.register_by_number_check.format(flat.id), reply_markup=markup)
     else:
         print("13")
@@ -122,12 +125,13 @@ def start(message):
     print(message)
     #print(message.forward_from.id)
     registered_user = flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id)
+    markup = tg.types.InlineKeyboardMarkup()
+    text_for_message = ''
     if registered_user:
-        markup = tg.types.InlineKeyboardMarkup()
-        text_for_message = None
         if not registered_user.flat_id:
             ''' указал только номер этажа и парадную
             '''
+            addButton(markup, TEXT.reregister_by_number)
             pass
         else:
             ''' указал номер квартиры
@@ -143,17 +147,16 @@ def start(message):
             '''
             print(2)
             pass
-        bot.send_message(tg_id, text_for_message, reply_markup=markup)
     else:
         ''' новый пользователь, ранее не регистрировался и не попадал в список
         '''
         print(-1)
-        markup = tg.types.InlineKeyboardMarkup()
-        item1 = tg.types.InlineKeyboardButton(text=TEXT.register_by_number, callback_data=TEXT.register_by_number)
-        item2 = tg.types.InlineKeyboardButton(text=TEXT.register_by_entr_and_floor, callback_data=TEXT.register_by_entr_and_floor)
-        markup.add(item1)
-        markup.add(item2)
-        bot.send_message(tg_id, TEXT.welcome_first, reply_markup=markup)
+        text_for_message = TEXT.welcome_first
+        addButton(markup, TEXT.register_by_number)
+        addButton(markup, TEXT.register_by_entr_and_floor)
+
+    addButton(markup, TEXT.make_post)
+    bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
 
 
