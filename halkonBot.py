@@ -44,31 +44,32 @@ def add_user(tg_id, flat_id):
     flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_id).addResident(tg_id)
 
     #func.save_dict_to_file(data_file_path, house_dict)
-    print(len(flats.getAllHouseResidents(house_dict)))
+    print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     pass
 
 
-def register(message):
-    tg_id = message.from_user.id
+@bot.callback_query_handler(func=lambda call: True)
+def register(call):
+    print(call)
+    tg_id = call.from_user.id
+    bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
     bot.send_chat_action(tg_id, 'typing')
-    print(message.text.split(':')[0])
-    print(TEXT.register_by_number_confirm.split(':')[0])
-    if message.text in [TEXT.register_by_number, TEXT.register_by_number_cancel]:
+    if call.data in [TEXT.register_by_number, TEXT.register_by_number_cancel]:
         print("01")
         bot.send_message(tg_id, TEXT.enter_flat_number)
-        bot.register_next_step_handler(message, register_with_number)
+        bot.register_next_step_handler(call.message, register_with_number)
         pass
-    elif message.text == TEXT.reregister_by_number:
+    elif call.data == TEXT.reregister_by_number:
         print("02")
         pass
-    elif message.text == TEXT.register_by_entr_and_floor:
+    elif call.data == TEXT.register_by_entr_and_floor:
         print("03")
         pass
-    elif message.text.split(':')[0] == TEXT.register_by_number_confirm.split(':')[0]:
+    elif call.data.split(':')[0] == TEXT.register_by_number_confirm.split(':')[0]:
         print("04")
-        flat_id = int(message.text.split(': ')[1])
+        flat_id = int(call.data.split(': ')[1])
         add_user(tg_id, flat_id)
-        start(message)
+        start(call)
     print("00")
     pass
 
@@ -85,13 +86,14 @@ def register_with_number(message):
     flat = flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_number)
     if flat and flat_number:
         print("12")
-        markup = tg.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-        item1 = tg.types.KeyboardButton(TEXT.register_by_number_confirm.format(flat.id))
-        item2 = tg.types.KeyboardButton(TEXT.register_by_number_cancel)
+        markup = tg.types.InlineKeyboardMarkup()
+        item1 = tg.types.InlineKeyboardButton(text=TEXT.register_by_number_confirm.format(flat.id),
+                                              callback_data=TEXT.register_by_number_confirm.format(flat.id))
+        item2 = tg.types.InlineKeyboardButton(text=TEXT.register_by_number_cancel,
+                                              callback_data=TEXT.register_by_number_cancel)
         markup.add(item1)
         markup.add(item2)
         bot.send_message(tg_id, TEXT.register_by_number_check.format(flat.id), reply_markup=markup)
-        bot.register_next_step_handler(message, register)
     else:
         print("13")
         bot.send_message(tg_id, TEXT.register_by_number_reinput)
@@ -128,13 +130,13 @@ def start(message):
         ''' новый пользователь, ранее не регистрировался и не попадал в список
         '''
         print(-1)
-        markup = tg.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-        item1 = tg.types.KeyboardButton(TEXT.register_by_number)
-        item2 = tg.types.KeyboardButton(TEXT.register_by_entr_and_floor)
+        markup = tg.types.InlineKeyboardMarkup()
+        item1 = tg.types.InlineKeyboardButton(text=TEXT.register_by_number, callback_data=TEXT.register_by_number)
+        item2 = tg.types.InlineKeyboardButton(text=TEXT.register_by_entr_and_floor, callback_data=TEXT.register_by_entr_and_floor)
         markup.add(item1)
         markup.add(item2)
         bot.send_message(tg_id, TEXT.welcome_first, reply_markup=markup)
-        bot.register_next_step_handler(message, register)
+        #bot.register_next_step_handler(message, register)
 
 
 
