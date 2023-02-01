@@ -37,9 +37,14 @@ def set_admin(tg_id):
     '''
 
 
-def add_user(tg_id):
+def add_user(tg_id, flat_id):
+    print(flat_id)
     # дать ссылку для вступления
     # занести в список пользователей неподтверждённых?
+    flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_id).addResident(tg_id)
+
+    #func.save_dict_to_file(data_file_path, house_dict)
+    print(len(flats.getAllHouseResidents(house_dict)))
     pass
 
 
@@ -61,9 +66,9 @@ def register(message):
         pass
     elif message.text.split(':')[0] == TEXT.register_by_number_confirm.split(':')[0]:
         print("04")
-        flat_id = message.text.split(': ')[1]
-        print(flat_id)
-        pass
+        flat_id = int(message.text.split(': ')[1])
+        add_user(tg_id, flat_id)
+        start(message)
     print("00")
     pass
 
