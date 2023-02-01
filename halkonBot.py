@@ -52,24 +52,31 @@ def add_user(tg_id, flat_id):
 def register(call):
     print(call)
     tg_id = call.from_user.id
-    bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
     bot.send_chat_action(tg_id, 'typing')
     if call.data in [TEXT.register_by_number, TEXT.register_by_number_cancel]:
         print("01")
+        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         bot.send_message(tg_id, TEXT.enter_flat_number)
         bot.register_next_step_handler(call.message, register_with_number)
         pass
     elif call.data == TEXT.reregister_by_number:
         print("02")
+        bot.send_message(tg_id, TEXT.wip)
         pass
     elif call.data == TEXT.register_by_entr_and_floor:
         print("03")
+        bot.send_message(tg_id, TEXT.wip)
         pass
     elif call.data.split(':')[0] == TEXT.register_by_number_confirm.split(':')[0]:
         print("04")
+        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         flat_id = int(call.data.split(': ')[1])
         add_user(tg_id, flat_id)
         start(call)
+    else:
+        print("WTF WTF WTF")
+        bot.send_message(tg_id, TEXT.error)
+        pass
     print("00")
     pass
 
@@ -116,16 +123,27 @@ def start(message):
     #print(message.forward_from.id)
     registered_user = flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id)
     if registered_user:
+        markup = tg.types.InlineKeyboardMarkup()
+        text_for_message = None
+        if not registered_user.flat_id:
+            ''' указал только номер этажа и парадную
+            '''
+            pass
+        else:
+            ''' указал номер квартиры
+            '''
+            pass
         if registered_user.status_id == 0:
             ''' указал квартиру, но не подтверждён
             '''
             print(0)
             pass
-        elif registered_user.status_id >= 1:
+        if registered_user.status_id >= 1:
             ''' подтверждённый пользователь
             '''
             print(2)
             pass
+        bot.send_message(tg_id, text_for_message, reply_markup=markup)
     else:
         ''' новый пользователь, ранее не регистрировался и не попадал в список
         '''
@@ -136,7 +154,6 @@ def start(message):
         markup.add(item1)
         markup.add(item2)
         bot.send_message(tg_id, TEXT.welcome_first, reply_markup=markup)
-        #bot.register_next_step_handler(message, register)
 
 
 
