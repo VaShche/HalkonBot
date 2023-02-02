@@ -51,7 +51,10 @@ def actionCallbackData(action, data):
 
 
 def getCallbackAction(call):
-    return int(call.data.split(SPLITTER)[0])
+    try:
+        return int(call.data.split(SPLITTER)[0])
+    except Exception:
+        return -1
 
 def getCallbackData(call):
     return call.data.split(SPLITTER)[1]
@@ -276,7 +279,7 @@ def todo1(ChatInviteLink):
     pass
     # promoteChatMember
 
-# while True:
+#while True:
 if True:
     try:
         bot.polling(none_stop=True)

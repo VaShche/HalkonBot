@@ -42,8 +42,8 @@ class Flat(object):
     floor = None
     entrance = None
     residents = []
-    up_ids = []
-    down_ids = []
+    up_residents = []
+    down_residents = []
 
     def __init__(self, number, entrance, floor, up_residents=None, down_residents=None):
         self.id = number
@@ -82,13 +82,13 @@ class Flat(object):
 
     def getUpNeighbors(self, flats_in_entrance_list):
         neighbors = []
-        for id in self.up_ids:
+        for id in self.up_residents:
             neighbors += self.findByFlatID(flats_in_entrance_list, id).residents
         return neighbors
 
     def getDownNeighbors(self, flats_in_entrance_list):
         neighbors = []
-        for id in self.down_ids:
+        for id in self.down_residents:
             neighbors += self.findByFlatID(flats_in_entrance_list, id).residents
         return neighbors
 
