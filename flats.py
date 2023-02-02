@@ -148,18 +148,18 @@ def getHalkonFlatsStruct():
     halkon_flats = {1: [], 'v': [], 2: [], 3: [], 4: [], 'k': []}
     '''#1 '''
     halkon_flats[1] = getFlatsAtEntranceStruct(1, 1, 18, first_floor=3, flats_count=3)
-    Flat.findByFlatID(halkon_flats[1], 14).up_ids.append(16)
-    Flat.findByFlatID(halkon_flats[1], 16).down_ids.append(14)
+    Flat.findByFlatID(halkon_flats[1], 14).up_residents.append(16)
+    Flat.findByFlatID(halkon_flats[1], 16).down_residents.append(14)
     '''#villas '''
     halkon_flats['v'] = getFlatsAtEntranceStruct('v', 19, 22, first_floor=1, flats_count=4)
 
     '''#2 '''
     halkon_flats[2] = getFlatsAtEntranceStruct(2, 23, 41, first_floor=2, flats_count=3, start_counter=2)
-    Flat.findByFlatID(halkon_flats[2], 41).up_ids.append(56)
+    Flat.findByFlatID(halkon_flats[2], 41).up_residents.append(56)
 
     '''#3 '''
     halkon_flats[3] = getFlatsAtEntranceStruct(3, 42, 57, first_floor=2, flats_count=2)
-    Flat.findByFlatID(halkon_flats[3], 56).down_ids.append(41)
+    Flat.findByFlatID(halkon_flats[3], 56).down_residents.append(41)
 
     '''#4 '''
     halkon_flats[4] = getFlatsAtEntranceStruct(4, 58, 72, first_floor=2, flats_count=2, start_counter=1)
@@ -187,9 +187,9 @@ class FlatsTest(unittest.TestCase):
         f = Flat(1, 1, 7)
         print(f)
         tg_id = 1
-        f.addResident(tg_id)
+        f.addResident(tg_id, tg_id)
         res = f.residents
-        f.addResident(tg_id)
+        f.addResident(tg_id, tg_id)
         self.assertEqual(f.residents, res)
         print(f)
         f.removeResident(tg_id)
