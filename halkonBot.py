@@ -65,7 +65,7 @@ def add_user(tg_id, tg_chat_id, flat_id):
     # дать ссылку для вступления
     # занести в список пользователей неподтверждённых?
     flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_id).addResident(tg_id, tg_chat_id)
-
+    bot.send_message(chat_id, TEXT.new_neighbor.format(tg_id, flat_id))  # TODO изменить chat_id в конфиге
     func.save_dict_to_file(data_file_path, house_dict)
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     pass
@@ -199,7 +199,7 @@ def general(call):
     elif call_data == TEXT.get_yk_contact:
         '''контакты управляющей
         '''
-        bot.send_message(tg_id, TEXT.wip)  # TODO !!!
+        bot.send_contact(tg_id, config['MC']['phone'], config['MC']['name'], config['MC']['lastname'])
     else:
         print("WTF general WTF")
         bot.send_message(tg_id, TEXT.error.format('general'))
@@ -230,7 +230,12 @@ def start(message):
     markup = tg.types.InlineKeyboardMarkup(row_width=8)
     text_for_message = ''
     if registered_user:
-        # TODO проверка на админство в чате (для присвоения статуса проверенного)
+        # проверка на админство в чате (для присвоения статуса проверенного)
+        chat_admins = bot.get_chat_administrators(chat_id)
+        for admin in chat_admins:
+            if admin.user.id == registered_user.id:
+                registered_user.status_id = 2
+
         if True:
             # TODO должно быть исключение для УК и? коммерческой
             button = tg.types.InlineKeyboardButton(text=TEXT.close_chat_link, url=chat_link)
@@ -259,6 +264,8 @@ def start(message):
             ''' подтверждённый пользователь
             '''
             print(2)
+            addButton(markup, REGISTER_ACTION, TEXT.register_approve)  # `TODO
+            addButton(markup, REGISTER_ACTION, TEXT.register_cancel)  # `TODO
             pass
         addButton(markup, GENERAL_ACTION, TEXT.get_yk_contact)
     else:
@@ -272,12 +279,6 @@ def start(message):
     addButton(markup, ADVERT_ACTION, TEXT.make_post)
     bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
-
-
-#@bot.chat_join_request_handler()
-def todo1(ChatInviteLink):
-    pass
-    # promoteChatMember
 
 #while True:
 if True:
