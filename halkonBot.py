@@ -132,7 +132,7 @@ def neighbors(call):
     print(call_data)
     tg_id = call.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    flat = flats.Flat.findByPerson(flats.getAllHouseResidents(house_dict), tg_id)
+    flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
     if flat and call_data in (TEXT.get_floor_neighbors, TEXT.get_up_neighbors,
                               TEXT.get_down_neighbors, TEXT.get_entrance_neighbors):
         n_list = []
