@@ -106,11 +106,11 @@ def register(call):
         pass
     elif call_data == TEXT.reregister_by_number:
         print("02")
-        bot.send_message(tg_id, TEXT.wip)
+        bot.send_message(tg_id, TEXT.wip)  # TODO !!!
         pass
     elif call_data == TEXT.register_by_entr_and_floor:
         print("03")
-        bot.send_message(tg_id, TEXT.wip)
+        bot.send_message(tg_id, TEXT.wip)  # TODO !!!
         pass
     elif call_data.split(':')[0] == TEXT.register_by_number_confirm.split(':')[0]:
         print("04")
@@ -181,7 +181,7 @@ def advert(call):
     call_data = getCallbackData(call)
     print(call_data)
     tg_id = call.from_user.id
-    bot.send_message(tg_id, TEXT.wip)
+    bot.send_message(tg_id, TEXT.wip)  # TODO !!!
 
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == GENERAL_ACTION)
@@ -196,7 +196,7 @@ def general(call):
     elif call_data == TEXT.get_yk_contact:
         '''контакты управляющей
         '''
-        bot.send_message(tg_id, TEXT.wip)
+        bot.send_message(tg_id, TEXT.wip)  # TODO !!!
     else:
         print("WTF general WTF")
         bot.send_message(tg_id, TEXT.error.format('general'))
