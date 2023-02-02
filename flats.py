@@ -2,13 +2,15 @@ import unittest
 
 class Resident(object):
     id = None
+    chat_id = None
     status_id = None
     statuses = {0: "Не подтверждён", 1: "Живёт в ЖК", 2: "Собственник в ЖК"}
     flat_id = None
     status_granted_by = None
 
-    def __init__(self, id, flat_id=None):
+    def __init__(self, id, chat_id, flat_id=None):
         self.id = id
+        self.chat_id = chat_id
         self.flat_id = flat_id
         self.status_id = 0
 
@@ -62,9 +64,9 @@ class Flat(object):
                                                                         self.entrance, self.residents,
                                                                         self.up_residents, self.down_residents)
 
-    def addResident(self, resident_tg_id):
+    def addResident(self, resident_tg_id, chat_id):
         if resident_tg_id not in Resident.getResidentsIDs(self.residents):
-            self.residents.append(Resident(resident_tg_id, self.id))
+            self.residents.append(Resident(resident_tg_id, chat_id, self.id))
 
     def removeResident(self, resident_tg_id):
         r = Resident.findByTgID(self.residents, resident_tg_id)
