@@ -68,6 +68,28 @@ def add_user(tg_id, tg_chat_id, flat_id):
     pass
 
 
+def register_with_number(message):
+    tg_id = message.from_user.id
+    bot.send_chat_action(tg_id, 'typing')
+    flat_number = None
+    try:
+        flat_number = int(message.text.strip())
+    except Exception:
+        pass
+        print("11")
+    flat = flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_number)
+    if flat and flat_number:
+        print("12")
+        markup = tg.types.InlineKeyboardMarkup()
+        addButton(markup, REGISTER_ACTION, TEXT.register_by_number_confirm.format(flat.id))
+        addButton(markup, REGISTER_ACTION, TEXT.register_by_number_cancel)
+        bot.send_message(tg_id, TEXT.register_by_number_check.format(flat.id), reply_markup=markup)
+    else:
+        print("13")
+        bot.send_message(tg_id, TEXT.register_by_number_reinput)
+        bot.register_next_step_handler(message, register_with_number)
+
+
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == REGISTER_ACTION)
 def register(call):
     print(call)
@@ -103,6 +125,77 @@ def register(call):
     print("00")
     pass
 
+@bot.callback_query_handler(func=lambda call: getCallbackAction(call) == NEIGHBORS_ACTION)
+def neighbors(call):
+    print(call)
+    call_data = getCallbackData(call)
+    print(call_data)
+    tg_id = call.from_user.id
+    bot.send_chat_action(tg_id, 'typing')
+    flat = flats.Flat.findByPerson(flats.getAllHouseResidents(house_dict), tg_id)
+    if flat and call_data in (TEXT.get_floor_neighbors, TEXT.get_up_neighbors, TEXT.get_down_neighbors):
+        n_list = []
+        if call_data == TEXT.get_floor_neighbors:
+            '''контакты соседей по этажу
+            '''
+            n_list = flat.getFloorNeighbors(house_dict.get(flat.entrance), True)  # TODO remove True for non self contact
+        elif flat and call_data == TEXT.get_up_neighbors:
+            '''контакты соседей выше
+            '''
+            n_list = flat.getUpNeighbors(house_dict.get(flat.entrance))
+        elif flat and call_data == TEXT.get_down_neighbors:
+            '''контакты соседей ниже
+            '''
+            n_list = flat.getDownNeighbors(house_dict.get(flat.entrance))
+
+        if n_list:
+            bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
+            markup = tg.types.InlineKeyboardMarkup(row_width=1)
+            for neighbor in n_list:
+                text = '№ 🙈'
+                if neighbor.flat_id:
+                    text = '№ {}'.format(neighbor.flat_id)
+                button = tg.types.InlineKeyboardButton(text, url='tg://user?id={}'.format(neighbor.id))
+                markup.add(button)
+            addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+            bot.send_message(tg_id, TEXT.neighbors_list, reply_markup=markup)
+
+        else:
+            bot.send_message(tg_id, TEXT.neighbors_not_found)
+    else:
+        print("WTF neighbors WTF")
+        bot.send_message(tg_id, TEXT.error.format('neighbors'))
+    pass
+
+
+@bot.callback_query_handler(func=lambda call: getCallbackAction(call) == ADVERT_ACTION)
+def advert(call):
+    print(call)
+    call_data = getCallbackData(call)
+    print(call_data)
+    tg_id = call.from_user.id
+    bot.send_message(tg_id, TEXT.wip)
+
+
+@bot.callback_query_handler(func=lambda call: getCallbackAction(call) == GENERAL_ACTION)
+def general(call):
+    print(call)
+    call_data = getCallbackData(call)
+    print(call_data)
+    tg_id = call.from_user.id
+    if call_data == TEXT.main_menu:
+        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
+        start(call)
+    elif call_data == TEXT.get_yk_contact:
+        '''контакты управляющей
+        '''
+        bot.send_message(tg_id, TEXT.wip)
+    else:
+        print("WTF general WTF")
+        bot.send_message(tg_id, TEXT.error.format('general'))
+    pass
+
+
 @bot.callback_query_handler(func=lambda call: True)
 def empty_action(call):
     print(call)
@@ -111,35 +204,11 @@ def empty_action(call):
     print("WTF empty_action WTF")
     bot.send_message(tg_id, TEXT.error.format('empty_action'))
 
-def register_with_number(message):
-    tg_id = message.from_user.id
-    bot.send_chat_action(tg_id, 'typing')
-    flat_number = None
-    try:
-        flat_number = int(message.text.strip())
-    except Exception:
-        pass
-        print("11")
-    flat = flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_number)
-    if flat and flat_number:
-        print("12")
-        markup = tg.types.InlineKeyboardMarkup()
-        addButton(markup, REGISTER_ACTION, TEXT.register_by_number_confirm.format(flat.id))
-        addButton(markup, REGISTER_ACTION, TEXT.register_by_number_cancel)
-        bot.send_message(tg_id, TEXT.register_by_number_check.format(flat.id), reply_markup=markup)
-    else:
-        print("13")
-        bot.send_message(tg_id, TEXT.register_by_number_reinput)
-        bot.register_next_step_handler(message, register_with_number)
-
-
 
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.send_chat_action(message.from_user.id, 'typing')
-    str = '''hhh'''
-    bot.reply_to(message, '''Я ещё в разработке...''')
+    start(message)
 
 @bot.message_handler()
 def start(message):
@@ -181,6 +250,7 @@ def start(message):
             '''
             print(2)
             pass
+        addButton(markup, GENERAL_ACTION, TEXT.get_yk_contact)
     else:
         ''' новый пользователь, ранее не регистрировался и не попадал в список
         '''
