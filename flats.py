@@ -92,6 +92,12 @@ class Flat(object):
             neighbors += self.findByFlatID(flats_in_entrance_list, id).residents
         return neighbors
 
+    def getAllNeighbors(self, flats_in_entrance_list):
+        neighbors = []
+        for f in flats_in_entrance_list:
+            neighbors += f.residents
+        return neighbors
+
 
     @staticmethod
     def findByFlatID(flats_list, flat_id):

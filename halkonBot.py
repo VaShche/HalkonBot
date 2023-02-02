@@ -133,7 +133,8 @@ def neighbors(call):
     tg_id = call.from_user.id
     bot.send_chat_action(tg_id, 'typing')
     flat = flats.Flat.findByPerson(flats.getAllHouseResidents(house_dict), tg_id)
-    if flat and call_data in (TEXT.get_floor_neighbors, TEXT.get_up_neighbors, TEXT.get_down_neighbors):
+    if flat and call_data in (TEXT.get_floor_neighbors, TEXT.get_up_neighbors,
+                              TEXT.get_down_neighbors, TEXT.get_entrance_neighbors):
         n_list = []
         if call_data == TEXT.get_floor_neighbors:
             '''контакты соседей по этажу
@@ -147,21 +148,27 @@ def neighbors(call):
             '''контакты соседей ниже
             '''
             n_list = flat.getDownNeighbors(house_dict.get(flat.entrance))
+        elif flat and call_data == TEXT.get_entrance_neighbors:
+            '''контакты соседей ниже
+            '''
+            n_list = flat.getAllNeighbors(house_dict.get(flat.entrance))
 
+        message_text = ''
+        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
+        markup = tg.types.InlineKeyboardMarkup(row_width=1)
         if n_list:
-            bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
-            markup = tg.types.InlineKeyboardMarkup(row_width=1)
             for neighbor in n_list:
                 text = '№ 🙈'
                 if neighbor.flat_id:
                     text = '№ {}'.format(neighbor.flat_id)
                 button = tg.types.InlineKeyboardButton(text, url='tg://user?id={}'.format(neighbor.id))
                 markup.add(button)
-            addButton(markup, GENERAL_ACTION, TEXT.main_menu)
-            bot.send_message(tg_id, TEXT.neighbors_list, reply_markup=markup)
-
+            message_text = TEXT.neighbors_list
         else:
-            bot.send_message(tg_id, TEXT.neighbors_not_found)
+            addButton(markup, NEIGHBORS_ACTION, TEXT.get_entrance_neighbors)
+            message_text = TEXT.neighbors_not_found
+        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        bot.send_message(tg_id, message_text, reply_markup=markup)
     else:
         print("WTF neighbors WTF")
         bot.send_message(tg_id, TEXT.error.format('neighbors'))
