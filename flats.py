@@ -145,24 +145,26 @@ def getFlatsAtEntranceStruct(entrance_id, first_flat, last_flat, first_floor, fl
 
 
 def getHalkonFlatsStruct():
-    halkon_flats = {1: [], 'v': [], 2: [], 3: [], 4: [], 'k': []}
+    halkon_flats = dict()
     '''#1 '''
-    halkon_flats[1] = getFlatsAtEntranceStruct(1, 1, 18, first_floor=3, flats_count=3)
-    Flat.findByFlatID(halkon_flats[1], 14).up_residents.append(16)
-    Flat.findByFlatID(halkon_flats[1], 16).down_residents.append(14)
+    entrance = 'Парадная №1'
+    halkon_flats[entrance] = getFlatsAtEntranceStruct(entrance, 1, 18, first_floor=3, flats_count=3)
+    Flat.findByFlatID(halkon_flats[entrance], 14).up_residents.append(16)
+    Flat.findByFlatID(halkon_flats[entrance], 16).down_residents.append(14)
     '''#villas '''
-    halkon_flats['v'] = getFlatsAtEntranceStruct('v', 19, 22, first_floor=1, flats_count=4)
-
+    entrance = 'Сити-виллы'
+    halkon_flats[entrance] = getFlatsAtEntranceStruct(entrance, 19, 22, first_floor=1, flats_count=4)
     '''#2 '''
-    halkon_flats[2] = getFlatsAtEntranceStruct(2, 23, 41, first_floor=2, flats_count=3, start_counter=2)
-    Flat.findByFlatID(halkon_flats[2], 41).up_residents.append(56)
-
+    entrance = 'Парадная №2'
+    halkon_flats[entrance] = getFlatsAtEntranceStruct(entrance, 23, 41, first_floor=2, flats_count=3, start_counter=2)
+    Flat.findByFlatID(halkon_flats[entrance], 41).up_residents.append(56)
     '''#3 '''
-    halkon_flats[3] = getFlatsAtEntranceStruct(3, 42, 57, first_floor=2, flats_count=2)
-    Flat.findByFlatID(halkon_flats[3], 56).down_residents.append(41)
-
+    entrance = 'Парадная №3'
+    halkon_flats[entrance] = getFlatsAtEntranceStruct(entrance, 42, 57, first_floor=2, flats_count=2)
+    Flat.findByFlatID(halkon_flats[entrance], 56).down_residents.append(41)
     '''#4 '''
-    halkon_flats[4] = getFlatsAtEntranceStruct(4, 58, 72, first_floor=2, flats_count=2, start_counter=1)
+    entrance = 'Парадная №4'
+    halkon_flats[entrance] = getFlatsAtEntranceStruct(entrance, 58, 72, first_floor=2, flats_count=2, start_counter=1)
 
     return halkon_flats
 

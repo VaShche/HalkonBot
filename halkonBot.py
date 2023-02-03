@@ -200,6 +200,22 @@ def general(call):
         '''контакты управляющей
         '''
         bot.send_contact(tg_id, config['MC']['phone'], config['MC']['name'], config['MC']['lastname'])
+    elif call_data == TEXT.statistics:
+        '''статистика по боту
+        '''
+        message_text = 'На данный момент зарегестрировались в боте и получили доступ в закрытый чат жильцов:'
+        for entrance in house_dict.keys():
+            res_list = []
+            flats_counter = 0
+            for f in house_dict.get(entrance):
+                if f.id:
+                    flats_counter += 1
+                res_list += f.residents
+            message_text += '\n{} - {} человек из {} квартир'.format(entrance, len(res_list), flats_counter)
+        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
+        markup = tg.types.InlineKeyboardMarkup(row_width=1)
+        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        bot.send_message(tg_id, message_text, reply_markup=markup)
     else:
         print("WTF general WTF")
         bot.send_message(tg_id, TEXT.error.format('general'))
@@ -255,10 +271,11 @@ def start(message):
             addButton(markup, NEIGHBORS_ACTION, TEXT.get_up_neighbors)
             addButton(markup, NEIGHBORS_ACTION, TEXT.get_down_neighbors)
             pass
-        if registered_user.status_id == 0:
+        if registered_user.status_id >= 0:
             ''' зареган, но не подтверждён
             '''
             print(0)
+            addButton(markup, GENERAL_ACTION, TEXT.statistics)  # `TODO
             pass
         if registered_user.status_id >= 1:
             ''' подтверждённый пользователь
@@ -277,6 +294,7 @@ def start(message):
         addButton(markup, REGISTER_ACTION, TEXT.register_by_entr_and_floor)
 
     addButton(markup, ADVERT_ACTION, TEXT.make_post)
+    addButton(markup, ADVERT_ACTION, TEXT.todo)
     bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
 
