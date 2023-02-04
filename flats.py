@@ -1,4 +1,5 @@
 import unittest
+from constants import COMMERCE
 
 class Resident(object):
     id = None
@@ -165,7 +166,9 @@ def getHalkonFlatsStruct():
     '''#4 '''
     entrance = 'Парадная №4'
     halkon_flats[entrance] = getFlatsAtEntranceStruct(entrance, 58, 72, first_floor=2, flats_count=2, start_counter=1)
-
+    '''коммерция'''
+    entrance = COMMERCE
+    halkon_flats[entrance] = [Flat(COMMERCE, entrance, 1)]
     return halkon_flats
 
 def getAllHouseFlats(house_dict):

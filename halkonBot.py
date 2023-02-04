@@ -65,7 +65,7 @@ def add_user(tg_id, tg_chat_id, flat_id):
     # дать ссылку для вступления
     # занести в список пользователей неподтверждённых?
     flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_id).addResident(tg_id, tg_chat_id)
-    bot.send_message(chat_id, TEXT.new_neighbor.format(tg_id, flat_id))  # TODO изменить chat_id в конфиге
+    bot.send_message(chat_id, TEXT.new_neighbor.format(tg_id, flat_id, tg_id), parse_mode='HTML')  # TODO изменить chat_id в конфиге
     func.save_dict_to_file(data_file_path, house_dict)
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     pass
@@ -160,10 +160,10 @@ def neighbors(call):
         bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
         if n_list:
-            for neighbor in n_list:
-                text = '№ 🙈'
+            for i, neighbor in enumerate(n_list):
+                text = '{}) Квартира №🙈'.format(i+1)
                 if neighbor.flat_id:
-                    text = '№ {}'.format(neighbor.flat_id)
+                    text = '{}) Квартира №{}'.format(i+1, neighbor.flat_id)
                 button = tg.types.InlineKeyboardButton(text, url='tg://user?id={}'.format(neighbor.id))
                 markup.add(button)
             message_text = TEXT.neighbors_list
@@ -208,10 +208,11 @@ def general(call):
             res_list = []
             flats_counter = 0
             for f in house_dict.get(entrance):
-                if f.id:
+                if f.id and f.residents:
                     flats_counter += 1
                 res_list += f.residents
-            message_text += '\n{} - {} человек из {} квартир'.format(entrance, len(res_list), flats_counter)
+            if res_list:
+                message_text += '\n{} - {} человек из {} квартир'.format(entrance, len(res_list), flats_counter)
         bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
         addButton(markup, GENERAL_ACTION, TEXT.main_menu)
@@ -252,30 +253,33 @@ def start(message):
             if admin.user.id == registered_user.id:
                 registered_user.status_id = 2
 
-        if True:
-            # TODO должно быть исключение для УК и? коммерческой
-            button = tg.types.InlineKeyboardButton(text=TEXT.close_chat_link, url=chat_link)
-            print(button)
-            markup.add(button)
-        addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
-        if not registered_user.flat_id:
-            ''' указал только номер этажа и парадную
-            '''
-            text_for_message = TEXT.welcome_floor
-            addButton(markup, REGISTER_ACTION, TEXT.reregister_by_number)
-            pass
-        else:
-            ''' указал номер квартиры
-            '''
-            text_for_message = TEXT.welcome_flat.format(registered_user.flat_id)
-            addButton(markup, NEIGHBORS_ACTION, TEXT.get_up_neighbors)
-            addButton(markup, NEIGHBORS_ACTION, TEXT.get_down_neighbors)
-            pass
         if registered_user.status_id >= 0:
             ''' зареган, но не подтверждён
             '''
             print(0)
-            addButton(markup, GENERAL_ACTION, TEXT.statistics)  # `TODO
+
+            if registered_user.flat_id != COMMERCE:
+                # исключение для УК и коммерческой
+                button = tg.types.InlineKeyboardButton(text=TEXT.close_chat_link, url=chat_link)
+                print(button)
+                markup.add(button)
+            addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
+            if not registered_user.flat_id:
+                ''' указал только номер этажа и парадную
+                '''
+                text_for_message = TEXT.welcome_floor
+                addButton(markup, REGISTER_ACTION, TEXT.reregister_by_number)
+                pass
+            else:
+                ''' указал номер квартиры
+                '''
+                text_for_message = TEXT.welcome_flat.format(registered_user.flat_id)
+                addButton(markup, NEIGHBORS_ACTION, TEXT.get_up_neighbors)
+                addButton(markup, NEIGHBORS_ACTION, TEXT.get_down_neighbors)
+                pass
+
+
+            addButton(markup, GENERAL_ACTION, TEXT.statistics)
             pass
         if registered_user.status_id >= 1:
             ''' подтверждённый пользователь
@@ -294,7 +298,7 @@ def start(message):
         addButton(markup, REGISTER_ACTION, TEXT.register_by_entr_and_floor)
 
     addButton(markup, ADVERT_ACTION, TEXT.make_post)
-    addButton(markup, ADVERT_ACTION, TEXT.todo)
+    addButton(markup, ADVERT_ACTION, TEXT.todo_for_bot)
     bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
 
