@@ -5,10 +5,8 @@ import flats
 import text as TEXT
 from constants import *
 
-
 config = configparser.ConfigParser()
 config.read('settings.ini')
-
 
 bot = tg.TeleBot(config['BOT']['token'])
 chat_id = config['BOT']['chatid']
@@ -56,6 +54,7 @@ def getCallbackAction(call):
     except Exception:
         return -1
 
+
 def getCallbackData(call):
     return call.data.split(SPLITTER)[1]
 
@@ -65,7 +64,8 @@ def add_user(tg_id, tg_chat_id, flat_id):
     # дать ссылку для вступления
     # занести в список пользователей неподтверждённых?
     flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_id).addResident(tg_id, tg_chat_id)
-    bot.send_message(chat_id, TEXT.new_neighbor.format(tg_id, flat_id, tg_id), parse_mode='HTML')  # TODO изменить chat_id в конфиге
+    bot.send_message(chat_id, TEXT.new_neighbor.format(tg_id, flat_id, tg_id),
+                     parse_mode='HTML')  # TODO изменить chat_id в конфиге и рассылать только соседям
     func.save_dict_to_file(data_file_path, house_dict)
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     pass
@@ -86,6 +86,7 @@ def register_with_number(message):
         markup = tg.types.InlineKeyboardMarkup()
         addButton(markup, REGISTER_ACTION, TEXT.register_by_number_confirm.format(flat.id))
         addButton(markup, REGISTER_ACTION, TEXT.register_by_number_cancel)
+        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, TEXT.register_by_number_check.format(flat.id), reply_markup=markup)
     else:
         print("13")
@@ -104,10 +105,10 @@ def register_with_commerce(message):
         flat = flats.Flat(company_name, COMMERCE, 1)
         flat.addResident(tg_id, tg_chat_id)
         house_dict.get(COMMERCE).append(flat)
-    bot.send_message(chat_id, TEXT.new_neighbor.format(tg_id, company_name, tg_id), parse_mode='HTML')  # TODO изменить chat_id в конфиге
+    bot.send_message(chat_id, TEXT.new_commerce.format(tg_id, company_name, tg_id),
+                     parse_mode='HTML', disable_notification=True)
     func.save_dict_to_file(data_file_path, house_dict)
     start(message)
-
 
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == REGISTER_ACTION)
@@ -135,6 +136,14 @@ def register(call):
     elif call_data == TEXT.register_commerce:
         print("05")
         bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
+        markup = tg.types.InlineKeyboardMarkup(row_width=1)
+        addButton(markup, REGISTER_ACTION, TEXT.register_commerce_im_shure)
+        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        bot.send_message(tg_id, TEXT.enter_commerce_approve, reply_markup=markup)
+        pass
+    elif call_data == TEXT.register_commerce_im_shure:
+        print("05")
+        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         bot.send_message(tg_id, TEXT.enter_commerce)
         bot.register_next_step_handler(call.message, register_with_commerce)
         pass
@@ -151,6 +160,7 @@ def register(call):
     print("00")
     pass
 
+
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == NEIGHBORS_ACTION)
 def neighbors(call):
     print(call)
@@ -163,13 +173,13 @@ def neighbors(call):
     if call_data == TEXT.get_floor_neighbors:
         '''контакты соседей по этажу
         '''
-        n_list = flat.getFloorNeighbors(house_dict.get(flat.entrance), True)  # TODO remove True for non self contact
+        n_list = flat.getFloorNeighbors(house_dict.get(flat.entrance))
     elif call_data == TEXT.get_entrance_neighbors:
         '''контакты соседей по парадной
         '''
         n_list = flat.getAllNeighbors(house_dict.get(flat.entrance))
     elif call_data == TEXT.get_all_neighbors:
-        '''контакты соседей по парадной
+        '''контакты всех всех соседей
         '''
         n_list = flats.getAllHouseResidents(house_dict)
     elif call_data == TEXT.get_house_commerce:
@@ -205,8 +215,6 @@ def neighbors(call):
         message_text = TEXT.neighbors_not_found
     addButton(markup, GENERAL_ACTION, TEXT.main_menu)
     bot.send_message(tg_id, message_text, reply_markup=markup)
-
-
     pass
 
 
@@ -226,6 +234,8 @@ def general(call):
     print(call_data)
     tg_id = call.from_user.id
     if call_data == TEXT.main_menu:
+        '''назад в главное
+        '''
         bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         start(call)
     elif call_data == TEXT.get_yk_contact:
@@ -235,7 +245,7 @@ def general(call):
     elif call_data == TEXT.statistics:
         '''статистика по боту
         '''
-        message_text = 'На данный момент зарегестрировались в боте и получили доступ в закрытый чат жильцов:'
+        message_text = 'На данный момент зарегестрировались в боте:'
         for entrance in house_dict.keys():
             res_list = []
             flats_counter = 0
@@ -243,7 +253,9 @@ def general(call):
                 if f.id and f.residents:
                     flats_counter += 1
                 res_list += f.residents
-            if res_list:
+            if res_list and entrance == COMMERCE:
+                message_text += '\n{} - {} представителей из {} компаний'.format(entrance, len(res_list), flats_counter)
+            elif res_list:
                 message_text += '\n{} - {} человек из {} квартир'.format(entrance, len(res_list), flats_counter)
         bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
@@ -264,17 +276,24 @@ def empty_action(call):
     bot.send_message(tg_id, TEXT.error.format('empty_action'))
 
 
-
 @bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
-    start(message)
+def bot_commands_handler(message):
+    bot_all_messages_handler(message)
 
-@bot.message_handler()
+
+@bot.message_handler(func=lambda message: True,
+                     content_types=['audio', 'photo', 'voice', 'video', 'document', 'text', 'location', 'contact',
+                                    'sticker'])
+def bot_all_messages_handler(message):
+    if message.chat.type == 'private':
+        start(message)
+
+
 def start(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
     print(message)
-    #print(message.forward_from.id)
+    # print(message.forward_from.id)
     registered_user = flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id)
     markup = tg.types.InlineKeyboardMarkup(row_width=8)
     text_for_message = ''
@@ -338,7 +357,7 @@ def start(message):
     bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
 
-#while True:
+# while True:
 if True:
     try:
         bot.polling(none_stop=True)

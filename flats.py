@@ -76,8 +76,8 @@ class Flat(object):
 
     def getFloorNeighbors(self, flats_in_entrance_list, with_same_flat_residents=False):
         neighbors = []
-        for f in flats_in_entrance_list:
-            if ((f.id != self.id) or with_same_flat_residents) and (f.floor == self.floor):
+        for f in self.getAllNeighbors(flats_in_entrance_list, with_same_flat_residents):
+            if f.floor == self.floor:
                 neighbors += f.residents
         return neighbors
 
@@ -93,10 +93,11 @@ class Flat(object):
             neighbors += self.findByFlatID(flats_in_entrance_list, id).residents
         return neighbors
 
-    def getAllNeighbors(self, flats_in_entrance_list):
+    def getAllNeighbors(self, flats_in_entrance_list, with_same_flat_residents=False):
         neighbors = []
         for f in flats_in_entrance_list:
-            neighbors += f.residents
+            if (f.id != self.id) or with_same_flat_residents:
+                neighbors += f.residents
         return neighbors
 
 
