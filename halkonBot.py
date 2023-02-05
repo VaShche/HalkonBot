@@ -71,15 +71,22 @@ def add_user(tg_id, tg_chat_id, flat_id):
     pass
 
 
+def confirm_user(another_tg_id, tg_id):  # TODO добавить установку админского статуса
+    pass
+
+
+def get_id_from_text(message_text):
+    try:
+        res_id = int(message_text.strip())
+    except Exception:
+        res_id = None
+    return res_id
+
+
 def register_with_number(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    flat_number = None
-    try:
-        flat_number = int(message.text.strip())
-    except Exception:
-        pass
-        print("11")
+    flat_number = get_id_from_text(message.text)
     flat = flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_number)
     if flat and flat_number:
         print("12")
@@ -87,11 +94,55 @@ def register_with_number(message):
         addButton(markup, REGISTER_ACTION, TEXT.register_by_number_confirm.format(flat.id))
         addButton(markup, REGISTER_ACTION, TEXT.register_by_number_cancel)
         addButton(markup, GENERAL_ACTION, TEXT.main_menu)
-        bot.send_message(tg_id, TEXT.register_by_number_check.format(flat.id), reply_markup=markup)
+        bot.send_message(tg_id, "Ваша квартира №{}, верно? ⤵️".format(flat.id), reply_markup=markup)
     else:
         print("13")
         bot.send_message(tg_id, TEXT.register_by_number_reinput)
         bot.register_next_step_handler(message, register_with_number)
+
+
+def register_another_user(message):
+    tg_id = message.from_user.id
+    bot.send_chat_action(tg_id, 'typing')
+    from_user_person = flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id)
+    if not from_user_person.adding_user_id:
+        '''Получение ID пользователя
+        '''
+        if message.forward_from:
+            another_tg_id = message.forward_from.id
+        else:
+            another_tg_id = get_id_from_text(message.text)
+        if another_tg_id:
+            from_user_person.adding_user_id = another_tg_id
+            #flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id).adding_user_id = another_tg_id
+            print(another_tg_id)
+            bot.send_message(tg_id, 'Напишите квартиру <a href="tg://user?id={}">человека</a> в ЖК Халькон (числом)'.format(another_tg_id), parse_mode='HTML')
+            bot.register_next_step_handler(message, register_another_user)
+        else:
+            bot.send_message(tg_id, TEXT.unsuccessful)
+            start(message)
+    elif not from_user_person.adding_user_flat_id:
+        '''Получение помещения
+        '''
+        flat_number = get_id_from_text(message.text)
+        if not flat_number and str(tg_id) == str(config['BOT']['adminid']):
+            flat_number = message.text
+            flat = flats.Flat(flat_number, COMMERCE, 1)
+            house_dict.get(COMMERCE).append(flat)
+
+        flat = flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_number)
+        if flat and flat_number:
+            another_tg_id = from_user_person.adding_user_id
+            from_user_person.adding_user_id = None
+            from_user_person.adding_user_flat_id = None
+            # flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id).adding_user_id = None
+            # flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id).adding_user_flat_id = None
+            add_user(another_tg_id, another_tg_id, flat_number)
+            confirm_user(another_tg_id, tg_id)  # TODO добавить проверку на то, что пользователь в чате
+            start(message)
+        else:
+            bot.send_message(tg_id, TEXT.register_by_number_reinput)
+            bot.register_next_step_handler(message, register_another_user)
 
 
 def register_with_commerce(message):
@@ -119,43 +170,49 @@ def register(call):
     tg_id = call.from_user.id
     tg_chat_id = call.message.chat.id
     bot.send_chat_action(tg_id, 'typing')
+    bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
     if call_data in [TEXT.register_by_number, TEXT.register_by_number_cancel]:
         print("01")
-        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
-        bot.send_message(tg_id, TEXT.enter_flat_number)
+        bot.send_message(tg_id, "Напишите пожалуйста номер Вашей квартиры в ЖК Халькон (числом)")
         bot.register_next_step_handler(call.message, register_with_number)
         pass
     elif call_data == TEXT.reregister_by_number:
         print("02")
         bot.send_message(tg_id, TEXT.wip)  # TODO !!!
+        start(call)
         pass
     elif call_data == TEXT.register_by_entr_and_floor:
         print("03")
         bot.send_message(tg_id, TEXT.wip)  # TODO !!!
+        start(call)
         pass
     elif call_data == TEXT.register_commerce:
         print("05")
-        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
         addButton(markup, REGISTER_ACTION, TEXT.register_commerce_im_shure)
         addButton(markup, GENERAL_ACTION, TEXT.main_menu)
-        bot.send_message(tg_id, TEXT.enter_commerce_approve, reply_markup=markup)
+        bot.send_message(tg_id, "Вы регистрируетесь как представитель компании, работающей с ЖК Халькон. Верно? ⤵️",
+                         reply_markup=markup)
         pass
     elif call_data == TEXT.register_commerce_im_shure:
-        print("05")
-        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
-        bot.send_message(tg_id, TEXT.enter_commerce)
+        print("06")
+        bot.send_message(tg_id, "Пожалуйста напишите название Вашей компании без кавычек")
         bot.register_next_step_handler(call.message, register_with_commerce)
         pass
     elif call_data.split(':')[0] == TEXT.register_by_number_confirm.split(':')[0]:
         print("04")
-        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         flat_id = int(call.data.split(': ')[1])
         add_user(tg_id, tg_chat_id, flat_id)
         start(call)
+    elif call_data == TEXT.register_approve:
+        print("07")
+        bot.send_message(tg_id, TEXT.choose_register_way_confirm)
+        bot.register_next_step_handler(call.message, register_another_user)
+        pass
     else:
         print("WTF register WTF")
         bot.send_message(tg_id, TEXT.error.format('register'))
+        start(call)
         pass
     print("00")
     pass
@@ -197,7 +254,7 @@ def neighbors(call):
     else:
         print("WTF neighbors WTF")
         bot.send_message(tg_id, TEXT.error.format('neighbors'))
-    message_text = TEXT.neighbors_list
+    message_text = "Контакты ⤵️"
     bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
     markup = tg.types.InlineKeyboardMarkup(row_width=1)
     if n_list:
@@ -215,7 +272,6 @@ def neighbors(call):
         message_text = TEXT.neighbors_not_found
     addButton(markup, GENERAL_ACTION, TEXT.main_menu)
     bot.send_message(tg_id, message_text, reply_markup=markup)
-    pass
 
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == ADVERT_ACTION)
@@ -298,11 +354,15 @@ def start(message):
     markup = tg.types.InlineKeyboardMarkup(row_width=8)
     text_for_message = ''
     if registered_user:
-        # проверка на админство в чате (для присвоения статуса проверенного)
+        # проверка на админство в чате (для присвоения статуса проверенного)  TODO
+        if str(registered_user.id) == str(config['BOT']['adminid']):
+            registered_user.status_id = 2
+        '''
         chat_admins = bot.get_chat_administrators(chat_id)
         for admin in chat_admins:
             if admin.user.id == registered_user.id:
                 registered_user.status_id = 2
+        '''
 
         if registered_user.status_id >= 0:
             ''' зареган, но не подтверждён
@@ -322,7 +382,7 @@ def start(message):
                 if not registered_user.flat_id:
                     ''' указал только номер этажа и парадную
                     '''
-                    text_for_message = TEXT.welcome_floor
+                    text_for_message = "👋 Вы не указали квартиру. Доступные действия ⤵️"
                     addButton(markup, REGISTER_ACTION, TEXT.reregister_by_number)
                     pass
                 else:
@@ -337,8 +397,8 @@ def start(message):
             ''' подтверждённый пользователь
             '''
             print(2)
-            addButton(markup, REGISTER_ACTION, TEXT.register_approve)  # `TODO
-            addButton(markup, REGISTER_ACTION, TEXT.register_cancel)  # `TODO
+            addButton(markup, REGISTER_ACTION, TEXT.register_approve)
+            #addButton(markup, REGISTER_ACTION, TEXT.register_cancel)  # TODO
             pass
         addButton(markup, GENERAL_ACTION, TEXT.statistics)
         addButton(markup, GENERAL_ACTION, TEXT.get_yk_contact)
@@ -352,8 +412,8 @@ def start(message):
         addButton(markup, REGISTER_ACTION, TEXT.register_by_entr_and_floor)
         addButton(markup, REGISTER_ACTION, TEXT.register_commerce)
 
-    addButton(markup, ADVERT_ACTION, TEXT.make_post)
-    addButton(markup, ADVERT_ACTION, TEXT.todo_for_bot)
+    #addButton(markup, ADVERT_ACTION, TEXT.make_post)  # TODO
+    #addButton(markup, ADVERT_ACTION, TEXT.todo_for_bot)  # TODO
     bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
 

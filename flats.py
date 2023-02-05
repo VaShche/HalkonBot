@@ -8,12 +8,16 @@ class Resident(object):
     statuses = {0: "Не подтверждён", 1: "Живёт в ЖК", 2: "Собственник в ЖК"}
     flat_id = None
     status_granted_by = None
+    adding_user_id = None
+    adding_user_flat_id = None
 
     def __init__(self, id, chat_id, flat_id=None):
         self.id = id
         self.chat_id = chat_id
         self.flat_id = flat_id
         self.status_id = 0
+        self.adding_user_id = None
+        self.adding_user_flat_id = None
 
     def setStatus(self, status_id, by):
         self.status_id = status_id
@@ -65,6 +69,12 @@ class Flat(object):
                                                                         self.entrance, self.residents,
                                                                         self.up_residents, self.down_residents)
 
+    def find_resident(self, resident_tg_id):
+        for r in self.residents:
+            if r.id == resident_tg_id:
+                return r
+        return None
+
     def addResident(self, resident_tg_id, chat_id):
         if resident_tg_id not in Resident.getResidentsIDs(self.residents):
             self.residents.append(Resident(resident_tg_id, chat_id, self.id))
@@ -76,8 +86,8 @@ class Flat(object):
 
     def getFloorNeighbors(self, flats_in_entrance_list, with_same_flat_residents=False):
         neighbors = []
-        for f in self.getAllNeighbors(flats_in_entrance_list, with_same_flat_residents):
-            if f.floor == self.floor:
+        for f in flats_in_entrance_list:
+            if ((f.id != self.id) or with_same_flat_residents) and f.floor == self.floor:
                 neighbors += f.residents
         return neighbors
 
@@ -93,7 +103,7 @@ class Flat(object):
             neighbors += self.findByFlatID(flats_in_entrance_list, id).residents
         return neighbors
 
-    def getAllNeighbors(self, flats_in_entrance_list, with_same_flat_residents=False):
+    def getAllNeighbors(self, flats_in_entrance_list, with_same_flat_residents=True):
         neighbors = []
         for f in flats_in_entrance_list:
             if (f.id != self.id) or with_same_flat_residents:
@@ -111,7 +121,7 @@ class Flat(object):
     @staticmethod
     def findByPerson(flats_list, person_tg_id):
         for f in flats_list:
-            if person_tg_id in Resident.getResidentsIDs(f.residents):
+            if f.find_resident(person_tg_id):
                 return f
         return None
 
@@ -198,6 +208,10 @@ class FlatsTest(unittest.TestCase):
         f.addResident(tg_id, tg_id)
         self.assertEqual(f.residents, res)
         print(f)
+        r = f.find_resident(1)
+        r.adding_user_id = 2
+        self.assertEqual(r.adding_user_id, f.find_resident(1).adding_user_id)
+        print(f.find_resident(1).adding_user_id)
         f.removeResident(tg_id)
         self.assertEqual(f.residents, [])
         print(f)
