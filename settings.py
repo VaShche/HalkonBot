@@ -11,6 +11,7 @@ if os.path.exists('settings.ini'):
     os.environ["HALKONBOT_BOT_DATA"] = str(conf['BOT']['data'])
     os.environ["HALKONBOT_BOT_LINK"] = str(conf['BOT']['invitelink'])
     os.environ["HALKONBOT_BOT_ADMIN"] = str(conf['BOT']['adminid'])
+    os.environ["HALKONBOT_BOT_CRYPTOKEY"] = str(conf['BOT']['cryptokey'])
 
     os.environ["HALKONBOT_MC_PHONE"] = str(conf['MC']['phone'])
     os.environ["HALKONBOT_MC_NAME"] = str(conf['MC']['name'])
@@ -21,6 +22,7 @@ config['BOT']['chatid'] = os.getenv("HALKONBOT_BOT_CHAT")
 config['BOT']['data'] = os.getenv("HALKONBOT_BOT_DATA")
 config['BOT']['invitelink'] = os.getenv("HALKONBOT_BOT_LINK")
 config['BOT']['adminid'] = os.getenv("HALKONBOT_BOT_ADMIN")
+config['BOT']['cryptokey'] = os.getenv("HALKONBOT_BOT_CRYPTOKEY")
 
 config['MC']['phone'] = os.getenv("HALKONBOT_MC_PHONE")
 config['MC']['name'] = os.getenv("HALKONBOT_MC_NAME")

@@ -6,16 +6,15 @@ from constants import *
 import settings
 
 config = settings.config
-print(config)
 bot = tg.TeleBot(config['BOT']['token'])
 chat_id = config['BOT']['chatid']
 data_file_path = config['BOT']['data']
 chat_link = config['BOT']['invitelink']
 
-house_dict = func.load_dict_from_file(data_file_path)
+house_dict = func.load_dict_from_file(data_file_path, key=config['BOT']['cryptokey'])
 if not house_dict:
     house_dict = flats.getHalkonFlatsStruct()
-    func.save_dict_to_file(data_file_path, house_dict)
+    func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
 else:
     print(len(flats.getAllHouseResidents(house_dict)))
 
@@ -65,7 +64,7 @@ def add_user(tg_id, tg_chat_id, flat_id):
     flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_id).addResident(tg_id, tg_chat_id)
     bot.send_message(chat_id, TEXT.new_neighbor.format(tg_id, flat_id, tg_id),
                      parse_mode='HTML')  # TODO изменить chat_id в конфиге и рассылать только соседям
-    func.save_dict_to_file(data_file_path, house_dict)
+    func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     pass
 
@@ -157,7 +156,7 @@ def register_with_commerce(message):
         house_dict.get(COMMERCE).append(flat)
     bot.send_message(chat_id, TEXT.new_commerce.format(tg_id, company_name, tg_id),
                      parse_mode='HTML', disable_notification=True)
-    func.save_dict_to_file(data_file_path, house_dict)
+    func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
     start(message)
 
 
