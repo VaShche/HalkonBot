@@ -1,9 +1,8 @@
 import flats
 import func
-import configparser
+import settings
 
-conf = configparser.ConfigParser()
-conf.read('settings.ini')
+conf = settings.config
 
 key = conf['BOT']['cryptokey']
 
