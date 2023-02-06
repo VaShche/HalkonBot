@@ -1,0 +1,27 @@
+import os
+import configparser
+
+config = {'BOT': dict(), 'MC': dict()}
+
+if os.path.exists('settings.ini'):
+    conf = configparser.ConfigParser()
+    conf.read('settings.ini')
+    os.environ["HALKONBOT_BOT_TOKEN"] = str(conf['BOT']['token'])
+    os.environ["HALKONBOT_BOT_CHAT"] = str(conf['BOT']['chatid'])
+    os.environ["HALKONBOT_BOT_DATA"] = str(conf['BOT']['data'])
+    os.environ["HALKONBOT_BOT_LINK"] = str(conf['BOT']['invitelink'])
+    os.environ["HALKONBOT_BOT_ADMIN"] = str(conf['BOT']['adminid'])
+
+    os.environ["HALKONBOT_MC_PHONE"] = str(conf['MC']['phone'])
+    os.environ["HALKONBOT_MC_NAME"] = str(conf['MC']['name'])
+    os.environ["HALKONBOT_MC_LN"] = str(conf['MC']['lastname'])
+
+config['BOT']['token'] = os.getenv("HALKONBOT_BOT_TOKEN")
+config['BOT']['chatid'] = os.getenv("HALKONBOT_BOT_CHAT")
+config['BOT']['data'] = os.getenv("HALKONBOT_BOT_DATA")
+config['BOT']['invitelink'] = os.getenv("HALKONBOT_BOT_LINK")
+config['BOT']['adminid'] = os.getenv("HALKONBOT_BOT_ADMIN")
+
+config['MC']['phone'] = os.getenv("HALKONBOT_MC_PHONE")
+config['MC']['name'] = os.getenv("HALKONBOT_MC_NAME")
+config['MC']['lastname'] = os.getenv("HALKONBOT_MC_LN")

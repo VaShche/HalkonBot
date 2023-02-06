@@ -1,13 +1,12 @@
 import telebot as tg
-import configparser
 import func
 import flats
 import text as TEXT
 from constants import *
+import settings
 
-config = configparser.ConfigParser()
-config.read('settings.ini')
-
+config = settings.config
+print(config)
 bot = tg.TeleBot(config['BOT']['token'])
 chat_id = config['BOT']['chatid']
 data_file_path = config['BOT']['data']
