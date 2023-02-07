@@ -69,6 +69,19 @@ def add_user(tg_id, tg_chat_id, flat_id):
     pass
 
 
+def del_user(tg_id, del_by_tg_id):
+    print(tg_id)
+    flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id).removeResident(tg_id)
+
+    func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
+    markup = tg.types.InlineKeyboardMarkup(row_width=1)
+    button = tg.types.InlineKeyboardButton(str(tg_id), url='tg://user?id={}'.format(tg_id))
+    markup.add(button)
+    bot.send_message(del_by_tg_id, 'Удалён', reply_markup=markup)
+    bot.send_message(config['BOT']['servicechatid'], 'Удалён', reply_markup=markup)
+    print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
+
+
 def confirm_user(another_tg_id, tg_id):  # TODO добавить установку админского статуса
     pass
 
@@ -143,6 +156,27 @@ def register_another_user(message):
             bot.register_next_step_handler(message, register_another_user)
 
 
+def remove_another_user(message):
+    tg_id = message.from_user.id
+    bot.send_chat_action(tg_id, 'typing')
+
+    if message.forward_from:
+        another_tg_id = message.forward_from.id
+    else:
+        another_tg_id = get_id_from_text(message.text)
+    if another_tg_id:
+        if flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), another_tg_id):
+            del_user(another_tg_id, tg_id)
+        else:
+            bot.send_message(tg_id, 'нет такого')
+        start(message)
+    else:
+        bot.send_message(tg_id, TEXT.unsuccessful)
+        start(message)
+
+
+
+
 def register_with_commerce(message):
     tg_id = message.from_user.id
     tg_chat_id = message.chat.id
@@ -206,6 +240,11 @@ def register(call):
         print("07")
         bot.send_message(tg_id, TEXT.choose_register_way_confirm)
         bot.register_next_step_handler(call.message, register_another_user)
+        pass
+    elif call_data == TEXT.register_cancel:
+        print("08")
+        bot.send_message(tg_id, 'Сообщение или ID человека для удаления (для отмены - "нет"):')
+        bot.register_next_step_handler(call.message, remove_another_user)
         pass
     else:
         print("WTF register WTF")
@@ -424,7 +463,7 @@ def start(message):
             '''
             print(2)
             addButton(markup, REGISTER_ACTION, TEXT.register_approve)
-            #addButton(markup, REGISTER_ACTION, TEXT.register_cancel)  # TODO
+            addButton(markup, REGISTER_ACTION, TEXT.register_cancel)
             pass
         addButton(markup, GENERAL_ACTION, TEXT.statistics)
         addButton(markup, GENERAL_ACTION, TEXT.get_yk_contact)
