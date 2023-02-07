@@ -294,12 +294,12 @@ def advert(call):
     call_data = getCallbackData(call)
     print(call_data)
     tg_id = call.from_user.id
-    if call_data == TEXT.main_menu:
+    if call_data == TEXT.make_post:
         '''объявление на модерацию
         '''
         bot.send_message(tg_id, 'Отправьте пожалуйста объявление одним сообщением. После модерации оно будет перенаправлено в @Halkon_SPb:')
         bot.register_next_step_handler(call.message, send_advert)
-    elif call_data == TEXT.get_yk_contact:
+    elif call_data == TEXT.todo_for_bot:
         '''обратная связь
         '''
         bot.send_message(tg_id, 'Напишите пожалуйста ваши идеи/предложения для отправки разработчику:')
