@@ -272,13 +272,41 @@ def neighbors(call):
     bot.send_message(tg_id, message_text, reply_markup=markup)
 
 
+def send_advert(message):
+    tg_id = message.from_user.id
+    bot.send_chat_action(tg_id, 'typing')
+    bot.send_message(config['BOT']['servicechatid'], 'Объявление на модерацию для канала:')
+    bot.forward_message(config['BOT']['servicechatid'], message.chat.id, message.message_id)
+    bot.send_message(tg_id, '✅ Сообщение отправлено на модерацию. После неё оно будет опубликовано в @Halkon_SPb')
+    start(message)
+
+def send_idea(message):
+    tg_id = message.from_user.id
+    bot.send_chat_action(tg_id, 'typing')
+    bot.send_message(config['BOT']['adminid'], 'Идея для бота:')
+    bot.forward_message(config['BOT']['adminid'], message.chat.id, message.message_id)
+    bot.send_message(tg_id, '✅ Сообщение отправлено разработчику. Спасибо!')
+    start(message)
+
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == ADVERT_ACTION)
 def advert(call):
     print(call)
     call_data = getCallbackData(call)
     print(call_data)
     tg_id = call.from_user.id
-    bot.send_message(tg_id, TEXT.wip)  # TODO !!!
+    if call_data == TEXT.main_menu:
+        '''объявление на модерацию
+        '''
+        bot.send_message(tg_id, 'Отправьте пожалуйста объявление одним сообщением. После модерации оно будет перенаправлено в @Halkon_SPb:')
+        bot.register_next_step_handler(call.message, send_advert)
+    elif call_data == TEXT.get_yk_contact:
+        '''обратная связь
+        '''
+        bot.send_message(tg_id, 'Напишите пожалуйста ваши идеи/предложения для отправки разработчику:')
+        bot.register_next_step_handler(call.message, send_idea)
+    else:
+        print("WTF advert WTF")
+        bot.send_message(tg_id, TEXT.error.format('advert'))
 
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == GENERAL_ACTION)
@@ -410,8 +438,8 @@ def start(message):
         addButton(markup, REGISTER_ACTION, TEXT.register_by_entr_and_floor)
         addButton(markup, REGISTER_ACTION, TEXT.register_commerce)
 
-    #addButton(markup, ADVERT_ACTION, TEXT.make_post)  # TODO
-    #addButton(markup, ADVERT_ACTION, TEXT.todo_for_bot)  # TODO
+    addButton(markup, ADVERT_ACTION, TEXT.make_post)
+    addButton(markup, ADVERT_ACTION, TEXT.todo_for_bot)
     bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
 
