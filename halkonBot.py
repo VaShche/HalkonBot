@@ -57,14 +57,29 @@ def getCallbackData(call):
     return call.data.split(SPLITTER)[1]
 
 
+def users_link_markup(tg_id, name):
+    markup = tg.types.InlineKeyboardMarkup(row_width=1)
+    button = tg.types.InlineKeyboardButton(str(name), url='tg://user?id={}'.format(tg_id))
+    markup.add(button)
+    return markup
+
+
 def add_user(tg_id, tg_chat_id, flat_id):
     print(tg_id, tg_chat_id, flat_id)
     # дать ссылку для вступления
     # занести в список пользователей неподтверждённых?
-    flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_id).addResident(tg_id, tg_chat_id)
-    bot.send_message(chat_id, TEXT.new_neighbor.format(tg_id, flat_id, tg_id),
-                     parse_mode='HTML')  # TODO изменить chat_id в конфиге и рассылать только соседям
+    flat = flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_id)
+    flat.addResident(tg_id, tg_chat_id)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
+
+    markup = users_link_markup(tg_id, 'Квартира №{}'.format(flat_id))
+    notify_neighbors = flat.closest_neighbors(flats.getAllHouseFlats(house_dict))
+    bot.send_message(config['BOT']['servicechatid'],
+                     TEXT.new_neighbor.format(tg_id, flats.Resident.getResidentsIDs(notify_neighbors)),
+                     parse_mode='HTML', reply_markup=markup)
+    for n in notify_neighbors:
+        bot.send_message(n.chat_id, TEXT.new_neighbor.format(tg_id, ''),
+                         parse_mode='HTML', reply_markup=markup, disable_notification=True)
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     pass
 
@@ -79,11 +94,15 @@ def del_user(tg_id, del_by_tg_id):
     flat.removeResident(tg_id)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
 
-    markup = tg.types.InlineKeyboardMarkup(row_width=1)
-    button = tg.types.InlineKeyboardButton(str(tg_id), url='tg://user?id={}'.format(tg_id))
-    markup.add(button)
+    markup = users_link_markup(tg_id, tg_id)
     bot.send_message(del_by_tg_id, 'Удалён', reply_markup=markup)
     bot.send_message(config['BOT']['servicechatid'], 'Удалён', reply_markup=markup)
+    # TODO уведомить соседей
+    '''
+    notify_neighbors = flat.closest_neighbors(flats.getAllHouseFlats(house_dict))
+    for n in notify_neighbors:
+        bot.send_message(n.chat_id, 'Удалён', reply_markup=markup, disable_notification=True)
+    '''
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     return tg_id
 
@@ -131,7 +150,6 @@ def register_another_user(message):
             another_tg_id = get_id_from_text(message.text)
         if another_tg_id:
             from_user_person.adding_user_id = another_tg_id
-            #flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id).adding_user_id = another_tg_id
             print(another_tg_id)
             bot.send_message(tg_id, 'Напишите квартиру <a href="tg://user?id={}">человека</a> в ЖК Халькон (числом)'.format(another_tg_id), parse_mode='HTML')
             bot.register_next_step_handler(message, register_another_user)
@@ -152,8 +170,6 @@ def register_another_user(message):
             another_tg_id = from_user_person.adding_user_id
             from_user_person.adding_user_id = None
             from_user_person.adding_user_flat_id = None
-            # flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id).adding_user_id = None
-            # flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id).adding_user_flat_id = None
             add_user(another_tg_id, another_tg_id, flat_number)
             confirm_user(another_tg_id, tg_id)  # TODO добавить проверку на то, что пользователь в чате
             start(message)
@@ -178,22 +194,26 @@ def remove_another_user(message):
         start(message)
 
 
-
-
 def register_with_commerce(message):
     tg_id = message.from_user.id
     tg_chat_id = message.chat.id
     bot.send_chat_action(tg_id, 'typing')
     company_name = message.text.strip()
     if flats.Flat.findByFlatID(house_dict.get(COMMERCE), company_name):
-        flats.Flat.findByFlatID(house_dict.get(COMMERCE), company_name).addResident(tg_id, tg_chat_id)
+        flat = flats.Flat.findByFlatID(house_dict.get(COMMERCE), company_name)
+        flat.addResident(tg_id, tg_chat_id)
     else:
         flat = flats.Flat(company_name, COMMERCE, 1)
         flat.addResident(tg_id, tg_chat_id)
         house_dict.get(COMMERCE).append(flat)
-    bot.send_message(chat_id, TEXT.new_commerce.format(tg_id, company_name, tg_id),
-                     parse_mode='HTML', disable_notification=True)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
+    markup = users_link_markup(tg_id, company_name)
+    bot.send_message(chat_id, TEXT.new_commerce.format(tg_id), parse_mode='HTML',
+                     reply_markup=markup, disable_notification=True)
+    notify_neighbors = flat.closest_neighbors(house_dict.get(COMMERCE))
+    for n in notify_neighbors:
+        bot.send_message(n.chat_id, TEXT.new_commerce.format(tg_id),
+                         parse_mode='HTML', reply_markup=markup, disable_notification=True)
     start(message)
 
 

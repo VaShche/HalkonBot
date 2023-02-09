@@ -111,6 +111,11 @@ class Flat(object):
         return neighbors
 
 
+    def closest_neighbors(self, flats_list):
+        #TODO
+        return []
+
+
     @staticmethod
     def findByFlatID(flats_list, flat_id):
         for f in flats_list:
