@@ -64,6 +64,32 @@ def users_link_markup(tg_id, name):
     return markup
 
 
+def send_user_info_wrapper(to_chat_id, message_text, markup, parse_mode=None, disable_notification=False):
+    print('ddddd', markup.to_dict())
+    try:
+        bot.send_message(to_chat_id, message_text, parse_mode=parse_mode,
+                         reply_markup=markup, disable_notification=disable_notification)
+    except Exception:
+        if markup:
+            new_markup = tg.types.InlineKeyboardMarkup()
+            for row in markup.keyboard:
+                for button in row:
+                    if button.url:
+                        message_text += '\n<a href="{}">{}</a> <span class="tg-spoiler">ID {}</span>'.\
+                            format(button.url, button.text, button.url.replace('tg://user?id=', ''))
+                    else:
+                        new_markup.add(button)
+        else:
+            new_markup = None
+        try:
+            bot.send_message(to_chat_id, message_text, parse_mode='HTML',
+                             reply_markup=new_markup, disable_notification=disable_notification)
+        except Exception:
+            bot.send_message(config['BOT']['servicechatid'],
+                             'EROOR with sending to tg://user?id={}'.format(to_chat_id))
+        print('fffff')
+
+
 def add_user(tg_id, tg_chat_id, flat_id):
     print(tg_id, tg_chat_id, flat_id)
     # дать ссылку для вступления
@@ -74,13 +100,14 @@ def add_user(tg_id, tg_chat_id, flat_id):
 
     markup = users_link_markup(tg_id, 'Квартира №{}'.format(flat_id))
     notify_neighbors = flat.closest_neighbors(house_dict)
-    bot.send_message(config['BOT']['servicechatid'],
-                     TEXT.new_neighbor.format(tg_id, flats.Resident.getResidentsIDs(notify_neighbors)),
-                     parse_mode='HTML', reply_markup=markup)
+    send_user_info_wrapper(config['BOT']['servicechatid'],
+                           TEXT.new_neighbor.format(tg_id, flats.Resident.getResidentsIDs(notify_neighbors)),
+                           markup, parse_mode='HTML')
     for n in notify_neighbors:
         if n.chat_id != tg_chat_id:
-            bot.send_message(n.chat_id, TEXT.new_neighbor.format(tg_id, ''),
-                             parse_mode='HTML', reply_markup=markup, disable_notification=True)
+            send_user_info_wrapper(n.chat_id,
+                                   TEXT.new_neighbor.format(tg_id, ''),
+                                   markup, parse_mode='HTML', disable_notification=True)
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     pass
 
@@ -96,8 +123,8 @@ def del_user(tg_id, del_by_tg_id):
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
 
     markup = users_link_markup(tg_id, tg_id)
-    bot.send_message(del_by_tg_id, 'Удалён', reply_markup=markup)
-    bot.send_message(config['BOT']['servicechatid'], 'Удалён', reply_markup=markup)
+    send_user_info_wrapper(del_by_tg_id, 'Удалён', markup)
+    send_user_info_wrapper(config['BOT']['servicechatid'], 'Удалён', markup)
     # TODO уведомить соседей
     '''
     notify_neighbors = flat.closest_neighbors(flats.getAllHouseFlats(house_dict))
@@ -209,13 +236,13 @@ def register_with_commerce(message):
         house_dict.get(COMMERCE).append(flat)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
     markup = users_link_markup(tg_id, company_name)
-    bot.send_message(chat_id, TEXT.new_commerce.format(tg_id), parse_mode='HTML',
-                     reply_markup=markup, disable_notification=True)
+    send_user_info_wrapper(chat_id, TEXT.new_commerce.format(tg_id), markup,
+                           parse_mode='HTML', disable_notification=True)
     notify_neighbors = flat.closest_neighbors(house_dict)
     for n in notify_neighbors:
         if n.chat_id != tg_chat_id:
-            bot.send_message(n.chat_id, TEXT.new_commerce.format(tg_id),
-                             parse_mode='HTML', reply_markup=markup, disable_notification=True)
+            send_user_info_wrapper(n.chat_id, TEXT.new_commerce.format(tg_id), markup,
+                                   parse_mode='HTML', disable_notification=True)
     start(message)
 
 
@@ -333,7 +360,7 @@ def neighbors(call):
             addButton(markup, NEIGHBORS_ACTION, TEXT.get_all_neighbors)
         message_text = TEXT.neighbors_not_found
     addButton(markup, GENERAL_ACTION, TEXT.main_menu)
-    bot.send_message(tg_id, message_text, reply_markup=markup)
+    send_user_info_wrapper(tg_id, message_text, markup)
 
 
 def send_advert(message):
