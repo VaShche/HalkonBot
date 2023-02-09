@@ -71,15 +71,21 @@ def add_user(tg_id, tg_chat_id, flat_id):
 
 def del_user(tg_id, del_by_tg_id):
     print(tg_id)
-    flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id).removeResident(tg_id)
+    flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
+    if not flat:
+        bot.send_message(tg_id, 'нет такого')
+        return None
 
+    flat.removeResident(tg_id)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
+
     markup = tg.types.InlineKeyboardMarkup(row_width=1)
     button = tg.types.InlineKeyboardButton(str(tg_id), url='tg://user?id={}'.format(tg_id))
     markup.add(button)
     bot.send_message(del_by_tg_id, 'Удалён', reply_markup=markup)
     bot.send_message(config['BOT']['servicechatid'], 'Удалён', reply_markup=markup)
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
+    return tg_id
 
 
 def confirm_user(another_tg_id, tg_id):  # TODO добавить установку админского статуса
@@ -165,10 +171,7 @@ def remove_another_user(message):
     else:
         another_tg_id = get_id_from_text(message.text)
     if another_tg_id:
-        if flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), another_tg_id):
-            del_user(another_tg_id, tg_id)
-        else:
-            bot.send_message(tg_id, 'нет такого')
+        del_user(another_tg_id, tg_id)
         start(message)
     else:
         bot.send_message(tg_id, TEXT.unsuccessful)
