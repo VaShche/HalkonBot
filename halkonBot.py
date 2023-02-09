@@ -371,6 +371,7 @@ def send_advert(message):
     bot.send_message(tg_id, '✅ Сообщение отправлено на модерацию. После неё оно будет опубликовано в @Halkon_SPb')
     start(message)
 
+
 def send_idea(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
@@ -378,6 +379,7 @@ def send_idea(message):
     bot.forward_message(config['BOT']['adminid'], message.chat.id, message.message_id)
     bot.send_message(tg_id, '✅ Сообщение отправлено разработчику. Спасибо!')
     start(message)
+
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == ADVERT_ACTION)
 def advert(call):
@@ -526,7 +528,7 @@ def start(message):
         print(-1)
         text_for_message = TEXT.welcome_first
         addButton(markup, REGISTER_ACTION, TEXT.register_by_number)
-        addButton(markup, REGISTER_ACTION, TEXT.register_by_entr_and_floor)
+        #addButton(markup, REGISTER_ACTION, TEXT.register_by_entr_and_floor)  # TODO
         addButton(markup, REGISTER_ACTION, TEXT.register_commerce)
 
     addButton(markup, ADVERT_ACTION, TEXT.make_post)
@@ -534,11 +536,8 @@ def start(message):
     bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
 
-# while True:
-if True:
+while True:
     try:
         bot.polling(none_stop=True)
     finally:
         print('zzz')
-
-print("hello world")
