@@ -110,11 +110,17 @@ class Flat(object):
                 neighbors += f.residents
         return neighbors
 
-
-    def closest_neighbors(self, flats_list):
-        #TODO
-        return []
-
+    def closest_neighbors(self, flats_dict):
+        if len(self.residents) > 1:
+            return self.residents
+        flats_list = flats_dict.get(self.entrance)
+        neighbors_list = self.getFloorNeighbors(flats_list, with_same_flat_residents=False)
+        neighbors_list += self.getUpNeighbors(flats_list) + self.getDownNeighbors(flats_list)
+        if not neighbors_list:
+            neighbors_list = self.getAllNeighbors(flats_list)
+        if not neighbors_list:
+            neighbors_list = getAllHouseResidents(flats_dict)
+        return neighbors_list
 
     @staticmethod
     def findByFlatID(flats_list, flat_id):

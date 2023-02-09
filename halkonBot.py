@@ -73,13 +73,14 @@ def add_user(tg_id, tg_chat_id, flat_id):
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
 
     markup = users_link_markup(tg_id, 'Квартира №{}'.format(flat_id))
-    notify_neighbors = flat.closest_neighbors(flats.getAllHouseFlats(house_dict))
+    notify_neighbors = flat.closest_neighbors(house_dict)
     bot.send_message(config['BOT']['servicechatid'],
                      TEXT.new_neighbor.format(tg_id, flats.Resident.getResidentsIDs(notify_neighbors)),
                      parse_mode='HTML', reply_markup=markup)
     for n in notify_neighbors:
-        bot.send_message(n.chat_id, TEXT.new_neighbor.format(tg_id, ''),
-                         parse_mode='HTML', reply_markup=markup, disable_notification=True)
+        if n.chat_id != tg_chat_id:
+            bot.send_message(n.chat_id, TEXT.new_neighbor.format(tg_id, ''),
+                             parse_mode='HTML', reply_markup=markup, disable_notification=True)
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     pass
 
@@ -210,10 +211,11 @@ def register_with_commerce(message):
     markup = users_link_markup(tg_id, company_name)
     bot.send_message(chat_id, TEXT.new_commerce.format(tg_id), parse_mode='HTML',
                      reply_markup=markup, disable_notification=True)
-    notify_neighbors = flat.closest_neighbors(house_dict.get(COMMERCE))
+    notify_neighbors = flat.closest_neighbors(house_dict)
     for n in notify_neighbors:
-        bot.send_message(n.chat_id, TEXT.new_commerce.format(tg_id),
-                         parse_mode='HTML', reply_markup=markup, disable_notification=True)
+        if n.chat_id != tg_chat_id:
+            bot.send_message(n.chat_id, TEXT.new_commerce.format(tg_id),
+                             parse_mode='HTML', reply_markup=markup, disable_notification=True)
     start(message)
 
 
