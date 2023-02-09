@@ -467,7 +467,7 @@ def bot_all_messages_handler(message):
 def start(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    print(message)
+    print(tg_id)
     # print(message.forward_from.id)
     registered_user = flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id)
     markup = tg.types.InlineKeyboardMarkup(row_width=8)
@@ -536,7 +536,7 @@ def start(message):
     bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
 
-while True:
+if True:
     try:
         bot.polling(none_stop=True)
     finally:
