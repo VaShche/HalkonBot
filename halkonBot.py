@@ -260,6 +260,16 @@ def register(call):
         bot.send_message(tg_id, "Напишите пожалуйста номер Вашей квартиры в ЖК Халькон (числом)")
         bot.register_next_step_handler(call.message, register_with_number)
         pass
+    elif call_data == TEXT.register_start:
+        print("001")
+        markup = tg.types.InlineKeyboardMarkup()
+        addButton(markup, REGISTER_ACTION, TEXT.register_by_number)
+        #addButton(markup, REGISTER_ACTION, TEXT.register_by_entr_and_floor)  # TODO
+        addButton(markup, REGISTER_ACTION, TEXT.register_commerce)
+        #addButton(markup, REGISTER_ACTION, TEXT.register_like_neighbor)  # TODO
+        #addButton(markup, REGISTER_ACTION, TEXT.register_just_interest)  # TODO
+        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        bot.send_message(tg_id, TEXT.welcome_register, reply_markup=markup)
     elif call_data == TEXT.reregister_by_number:
         print("02")
         bot.send_message(tg_id, TEXT.wip)  # TODO !!!
@@ -527,9 +537,7 @@ def start(message):
         '''
         print(-1)
         text_for_message = TEXT.welcome_first
-        addButton(markup, REGISTER_ACTION, TEXT.register_by_number)
-        #addButton(markup, REGISTER_ACTION, TEXT.register_by_entr_and_floor)  # TODO
-        addButton(markup, REGISTER_ACTION, TEXT.register_commerce)
+        addButton(markup, REGISTER_ACTION, TEXT.register_start)
 
     addButton(markup, ADVERT_ACTION, TEXT.make_post)
     addButton(markup, ADVERT_ACTION, TEXT.todo_for_bot)
