@@ -226,13 +226,11 @@ def register_with_commerce(message):
     tg_chat_id = message.chat.id
     bot.send_chat_action(tg_id, 'typing')
     company_name = message.text.strip()
-    if flats.Flat.findByFlatID(house_dict.get(COMMERCE), company_name):
-        flat = flats.Flat.findByFlatID(house_dict.get(COMMERCE), company_name)
-        flat.addResident(tg_id, tg_chat_id)
-    else:
+    flat = flats.Flat.findByFlatID(house_dict.get(COMMERCE), company_name)
+    if not flat:
         flat = flats.Flat(company_name, COMMERCE, 1)
-        flat.addResident(tg_id, tg_chat_id)
         house_dict.get(COMMERCE).append(flat)
+    flat.addResident(tg_id, tg_chat_id)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
     markup = users_link_markup(tg_id, company_name)
     send_user_info_wrapper(chat_id, TEXT.new_commerce.format(tg_id), markup,
@@ -264,8 +262,8 @@ def register(call):
         addButton(markup, REGISTER_ACTION, TEXT.register_by_number)
         #addButton(markup, REGISTER_ACTION, TEXT.register_by_entr_and_floor)  # TODO
         addButton(markup, REGISTER_ACTION, TEXT.register_commerce)
-        #addButton(markup, REGISTER_ACTION, TEXT.register_like_neighbor)  # TODO
-        #addButton(markup, REGISTER_ACTION, TEXT.register_just_interest)  # TODO
+        addButton(markup, REGISTER_ACTION, TEXT.register_living_close)
+        addButton(markup, REGISTER_ACTION, TEXT.register_interested)
         addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, TEXT.welcome_register, reply_markup=markup)
     elif call_data == TEXT.reregister_by_number:
@@ -287,7 +285,7 @@ def register(call):
                          reply_markup=markup)
         pass
     elif call_data == TEXT.register_commerce_im_shure:
-        print("06")
+        print("051")
         bot.send_message(tg_id, "Пожалуйста напишите название Вашей компании без кавычек")
         bot.register_next_step_handler(call.message, register_with_commerce)
         pass
@@ -306,6 +304,50 @@ def register(call):
         bot.send_message(tg_id, 'Сообщение или ID человека для удаления (для отмены - "нет"):')
         bot.register_next_step_handler(call.message, remove_another_user)
         pass
+    elif call_data == TEXT.register_living_close:
+        print("091")
+        markup = tg.types.InlineKeyboardMarkup(row_width=1)
+        addButton(markup, REGISTER_ACTION, TEXT.register_living_close_im_shure)
+        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        bot.send_message(tg_id, "Вы указали, что живёте рядом с ЖК Халькон. Верно? ⤵️",
+                         reply_markup=markup)
+        pass
+    elif call_data == TEXT.register_interested:
+        print("081")
+        markup = tg.types.InlineKeyboardMarkup(row_width=1)
+        addButton(markup, REGISTER_ACTION, TEXT.register_interested_im_shure)
+        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        bot.send_message(tg_id, "Вы указали, что не имеете никакого отношения к ЖК Халькон, а только интересуетесь. Верно? ⤵️",
+                         reply_markup=markup)
+        pass
+    elif call_data == TEXT.register_living_close_im_shure:
+        print("092")
+        flat = flats.Flat.findByFlatID(house_dict.get(OTHER, []), CLOSELIVING)
+        if not flat:
+            flat = flats.Flat(CLOSELIVING, OTHER, 1)
+            if not house_dict.get(OTHER, None):
+                house_dict[OTHER] = []
+            house_dict.get(OTHER).append(flat)
+        flat.addResident(tg_id, tg_chat_id)
+        func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
+        markup = users_link_markup(tg_id, CLOSELIVING)
+        send_user_info_wrapper(config['BOT']['servicechatid'], str(tg_id), markup,
+                               parse_mode='HTML', disable_notification=True)
+        start(call)
+    elif call_data == TEXT.register_interested_im_shure:
+        print("082")
+        flat = flats.Flat.findByFlatID(house_dict.get(OTHER, []), INTERESTED)
+        if not flat:
+            flat = flats.Flat(INTERESTED, OTHER, 1)
+            if not house_dict.get(OTHER, None):
+                house_dict[OTHER] = []
+            house_dict.get(OTHER).append(flat)
+        flat.addResident(tg_id, tg_chat_id)
+        func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
+        markup = users_link_markup(tg_id, INTERESTED)
+        send_user_info_wrapper(config['BOT']['servicechatid'], str(tg_id), markup,
+                               parse_mode='HTML', disable_notification=True)
+        start(call)
     else:
         print("WTF register WTF")
         bot.send_message(tg_id, TEXT.error.format('register'))
@@ -476,15 +518,16 @@ def start(message):
     # print(message.forward_from.id)
     registered_user = None
     registered_user_flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
-    if registered_user_flat.id == BAN:
-        '''BAN'''
-        bot.send_message(tg_id, TEXT.welcome_ban)
-        return 0  # EXIT
     if registered_user_flat:
         registered_user = flats.Resident.findByTgID(registered_user_flat.residents, tg_id)
     markup = tg.types.InlineKeyboardMarkup(row_width=8)
     text_for_message = ''
     if registered_user:
+        if registered_user_flat.id == BAN:
+            '''BAN'''
+            markup = None
+            bot.send_message(tg_id, TEXT.welcome_ban, reply_markup=markup)
+            return 0  # EXIT
         # проверка на админство в чате (для присвоения статуса проверенного)  TODO
         if str(registered_user.id) == str(config['BOT']['adminid']):
             registered_user.status_id = 2
@@ -504,6 +547,10 @@ def start(message):
                 ''' для УК и коммерческой
                 '''
                 text_for_message = TEXT.welcome_commerce.format(registered_user.flat_id)
+            elif registered_user_flat.id == INTERESTED:
+                text_for_message = TEXT.welcome_interested
+            elif registered_user_flat.id == CLOSELIVING:
+                text_for_message = TEXT.welcome_living_close
             elif registered_user_flat.entrance != OTHER:
                 ''' для зарегестрированных жильцов
                 '''
