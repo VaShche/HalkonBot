@@ -157,7 +157,7 @@ def register_with_number(message):
         addButton(markup, REGISTER_ACTION, TEXT.register_by_number_confirm.format(flat.id))
         addButton(markup, REGISTER_ACTION, TEXT.register_by_number_cancel)
         addButton(markup, GENERAL_ACTION, TEXT.main_menu)
-        bot.send_message(tg_id, "Ваша квартира №{}, верно? ⤵️".format(flat.id), reply_markup=markup)
+        bot.send_message(tg_id, TEXT.welcome_register_flat_confirm.format(flat.id), reply_markup=markup)
     else:
         print("13")
         bot.send_message(tg_id, TEXT.register_by_number_reinput)
@@ -253,7 +253,7 @@ def register(call):
     bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
     if call_data in [TEXT.register_by_number, TEXT.register_by_number_cancel]:
         print("01")
-        bot.send_message(tg_id, "Напишите пожалуйста номер Вашей квартиры в ЖК Халькон (числом)")
+        bot.send_message(tg_id, TEXT.welcome_register_flat)
         bot.register_next_step_handler(call.message, register_with_number)
         pass
     elif call_data == TEXT.register_start:
@@ -281,7 +281,7 @@ def register(call):
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
         addButton(markup, REGISTER_ACTION, TEXT.register_commerce_im_shure)
         addButton(markup, GENERAL_ACTION, TEXT.main_menu)
-        bot.send_message(tg_id, "Вы регистрируетесь как представитель компании, работающей с ЖК Халькон. Верно? ⤵️",
+        bot.send_message(tg_id, TEXT.welcome_register_company,
                          reply_markup=markup)
         pass
     elif call_data == TEXT.register_commerce_im_shure:
@@ -363,7 +363,11 @@ def neighbors(call):
     tg_id = call.from_user.id
     print('{} in "neighbors" with "{}"'.format(tg_id, call_data))
     bot.send_chat_action(tg_id, 'typing')
+    bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
     flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
+    if not flat:
+        start(call)
+        return 0
     n_list = []
     if call_data == TEXT.get_floor_neighbors:
         '''контакты соседей по этажу
@@ -393,7 +397,6 @@ def neighbors(call):
         print("WTF neighbors WTF")
         bot.send_message(tg_id, TEXT.error.format('neighbors'))
     message_text = "Контакты ⤵️"
-    bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
     markup = tg.types.InlineKeyboardMarkup(row_width=1)
     if n_list:
         for i, neighbor in enumerate(n_list):
@@ -464,6 +467,26 @@ def general(call):
         '''контакты управляющей
         '''
         bot.send_contact(tg_id, config['MC']['phone'], config['MC']['name'], config['MC']['lastname'])
+    elif call_data == TEXT.admin_actions:
+        '''меню администратора
+        '''
+        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
+        markup = tg.types.InlineKeyboardMarkup(row_width=1)
+        addButton(markup, REGISTER_ACTION, TEXT.register_approve)
+        addButton(markup, REGISTER_ACTION, TEXT.register_cancel)
+        addButton(markup, REGISTER_ACTION, TEXT.register_ban)  # TODO
+        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        bot.send_message(tg_id, 'Доступные действия ⤵️', reply_markup=markup)
+    elif call_data == TEXT.get_neighbors:
+        '''меню поиска соседей
+        '''
+        bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
+        markup = tg.types.InlineKeyboardMarkup(row_width=1)
+        addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
+        addButton(markup, NEIGHBORS_ACTION, TEXT.get_up_neighbors)
+        addButton(markup, NEIGHBORS_ACTION, TEXT.get_down_neighbors)
+        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        bot.send_message(tg_id, 'Доступные действия ⤵️', reply_markup=markup)
     elif call_data == TEXT.statistics:
         '''статистика по боту
         '''
@@ -556,27 +579,23 @@ def start(message):
                 '''
                 button = tg.types.InlineKeyboardButton(text=TEXT.close_chat_link, url=chat_link)
                 markup.add(button)
-                addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
                 if not registered_user.flat_id:
                     ''' указал только номер этажа и парадную
                     '''
                     text_for_message = "👋 Вы не указали квартиру. Доступные действия ⤵️"
+                    addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
                     addButton(markup, REGISTER_ACTION, TEXT.reregister_by_number)
-                    pass
                 else:
                     ''' указал номер квартиры
                     '''
                     text_for_message = TEXT.welcome_flat.format(registered_user.flat_id)
-                    addButton(markup, NEIGHBORS_ACTION, TEXT.get_up_neighbors)
-                    addButton(markup, NEIGHBORS_ACTION, TEXT.get_down_neighbors)
-                    pass
+                    addButton(markup, GENERAL_ACTION, TEXT.get_neighbors)
                 pass
         if registered_user.status_id >= 1:
             ''' подтверждённый пользователь
             '''
             print(2)
-            addButton(markup, REGISTER_ACTION, TEXT.register_approve)
-            addButton(markup, REGISTER_ACTION, TEXT.register_cancel)
+            addButton(markup, GENERAL_ACTION, TEXT.admin_actions)
             pass
         if registered_user.flat_id not in (CLOSELIVING, INTERESTED):
             '''кроме не относящихся к дому'''
