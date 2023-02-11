@@ -1,5 +1,5 @@
 import unittest
-from constants import COMMERCE
+from constants import *
 
 class Resident(object):
     id = None
@@ -191,6 +191,9 @@ def getHalkonFlatsStruct():
     '''коммерция'''
     entrance = COMMERCE
     halkon_flats[entrance] = [Flat(None, entrance, 1)]
+    '''окружающие'''
+    entrance = OTHER
+    halkon_flats[entrance] = [Flat(BAN, entrance, 1), Flat(INTERESTED, entrance, 1), Flat(CLOSELIVING, entrance, 1)]
     return halkon_flats
 
 def getAllHouseFlats(house_dict):

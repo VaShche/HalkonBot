@@ -476,6 +476,10 @@ def start(message):
     # print(message.forward_from.id)
     registered_user = None
     registered_user_flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
+    if registered_user_flat.id == BAN:
+        '''BAN'''
+        bot.send_message(tg_id, TEXT.welcome_ban)
+        return 0  # EXIT
     if registered_user_flat:
         registered_user = flats.Resident.findByTgID(registered_user_flat.residents, tg_id)
     markup = tg.types.InlineKeyboardMarkup(row_width=8)
@@ -500,7 +504,7 @@ def start(message):
                 ''' для УК и коммерческой
                 '''
                 text_for_message = TEXT.welcome_commerce.format(registered_user.flat_id)
-            else:
+            elif registered_user_flat.entrance != OTHER:
                 ''' для зарегестрированных жильцов
                 '''
                 button = tg.types.InlineKeyboardButton(text=TEXT.close_chat_link, url=chat_link)
@@ -527,8 +531,12 @@ def start(message):
             addButton(markup, REGISTER_ACTION, TEXT.register_approve)
             addButton(markup, REGISTER_ACTION, TEXT.register_cancel)
             pass
-        addButton(markup, GENERAL_ACTION, TEXT.statistics)
-        addButton(markup, GENERAL_ACTION, TEXT.get_yk_contact)
+        if registered_user.flat_id not in (CLOSELIVING, INTERESTED):
+            '''кроме не относящихся к дому'''
+            addButton(markup, GENERAL_ACTION, TEXT.statistics)
+            addButton(markup, GENERAL_ACTION, TEXT.get_yk_contact)
+        else:
+            pass  # TODO добавить возможность переехать в наш ЖК
         addButton(markup, NEIGHBORS_ACTION, TEXT.get_house_commerce)
     else:
         ''' новый пользователь, ранее не регистрировался и не попадал в список
