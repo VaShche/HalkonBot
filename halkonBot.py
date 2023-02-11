@@ -65,7 +65,6 @@ def users_link_markup(tg_id, name):
 
 
 def send_user_info_wrapper(to_chat_id, message_text, markup, parse_mode=None, disable_notification=False):
-    print('ddddd', markup.to_dict())
     try:
         bot.send_message(to_chat_id, message_text, parse_mode=parse_mode,
                          reply_markup=markup, disable_notification=disable_notification)
@@ -248,10 +247,9 @@ def register_with_commerce(message):
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == REGISTER_ACTION)
 def register(call):
-    print(call)
     call_data = getCallbackData(call)
-    print(call_data)
     tg_id = call.from_user.id
+    print('{} in "register" with "{}"'.format(tg_id, call_data))
     tg_chat_id = call.message.chat.id
     bot.send_chat_action(tg_id, 'typing')
     bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
@@ -319,10 +317,9 @@ def register(call):
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == NEIGHBORS_ACTION)
 def neighbors(call):
-    print(call)
     call_data = getCallbackData(call)
-    print(call_data)
     tg_id = call.from_user.id
+    print('{} in "neighbors" with "{}"'.format(tg_id, call_data))
     bot.send_chat_action(tg_id, 'typing')
     flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
     n_list = []
@@ -393,10 +390,9 @@ def send_idea(message):
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == ADVERT_ACTION)
 def advert(call):
-    print(call)
     call_data = getCallbackData(call)
-    print(call_data)
     tg_id = call.from_user.id
+    print('{} in "advert" with "{}"'.format(tg_id, call_data))
     if call_data == TEXT.make_post:
         '''объявление на модерацию
         '''
@@ -414,10 +410,9 @@ def advert(call):
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == GENERAL_ACTION)
 def general(call):
-    print(call)
     call_data = getCallbackData(call)
-    print(call_data)
     tg_id = call.from_user.id
+    print('{} in "general" with "{}"'.format(tg_id, call_data))
     if call_data == TEXT.main_menu:
         '''назад в главное
         '''
@@ -477,9 +472,12 @@ def bot_all_messages_handler(message):
 def start(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    print(tg_id)
+    print('{} in "start"'.format(tg_id))
     # print(message.forward_from.id)
-    registered_user = flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id)
+    registered_user = None
+    registered_user_flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
+    if registered_user_flat:
+        registered_user = flats.Resident.findByTgID(registered_user_flat.residents, tg_id)
     markup = tg.types.InlineKeyboardMarkup(row_width=8)
     text_for_message = ''
     if registered_user:
@@ -498,7 +496,7 @@ def start(message):
             '''
             print(0)
 
-            if flats.Flat.findByPerson(house_dict.get(COMMERCE), tg_id):
+            if registered_user_flat.entrance == COMMERCE:
                 ''' для УК и коммерческой
                 '''
                 text_for_message = TEXT.welcome_commerce.format(registered_user.flat_id)
