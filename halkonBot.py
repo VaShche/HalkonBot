@@ -500,6 +500,8 @@ def general(call):
                 res_list += f.residents
             if res_list and entrance == COMMERCE:
                 message_text += '\n{} - {} представителей из {} компаний'.format(entrance, len(res_list), flats_counter)
+            elif res_list and entrance == OTHER:
+                message_text += '\n{} - {} интересующихся или живущих рядом'.format(entrance, len(res_list))
             elif res_list:
                 message_text += '\n{} - {} человек из {} квартир'.format(entrance, len(res_list), flats_counter)
         bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
