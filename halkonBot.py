@@ -39,7 +39,10 @@ def addButton(markup, action, text, data=None):
     if not data:
         data = text
     button = tg.types.InlineKeyboardButton(text=text, callback_data=actionCallbackData(action, data))
-    markup.add(button)
+    if type(markup) is list:
+        markup.append(button)
+    else:
+        markup.add(button)
 
 
 def actionCallbackData(action, data):
@@ -58,7 +61,7 @@ def getCallbackData(call):
 
 
 def users_link_markup(tg_id, name):
-    markup = tg.types.InlineKeyboardMarkup(row_width=1)
+    markup = tg.types.InlineKeyboardMarkup()
     button = tg.types.InlineKeyboardButton(str(name), url='tg://user?id={}'.format(tg_id))
     markup.add(button)
     return markup
@@ -89,11 +92,17 @@ def send_user_info_wrapper(to_chat_id, message_text, markup, parse_mode=None, di
         print('fffff')
 
 
-def add_user(tg_id, tg_chat_id, flat_id):
+def add_user(tg_id, tg_chat_id, flat_id, floor_for_check=None):
     print(tg_id, tg_chat_id, flat_id)
-    # дать ссылку для вступления
-    # занести в список пользователей неподтверждённых?
+
     flat = flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_id)
+    if floor_for_check:
+        print(flat.floor, floor_for_check)
+        if flat.floor != floor_for_check:
+            print('zzzzzzzzzzzzzzz')
+            return 0
+            pass  # TODO бан/интерес пользователя если он наврал с этажём
+
     flat.addResident(tg_id, tg_chat_id)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
 
@@ -153,11 +162,14 @@ def register_with_number(message):
     flat = flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_number)
     if flat and flat_number:
         print("12")
-        markup = tg.types.InlineKeyboardMarkup()
-        addButton(markup, REGISTER_ACTION, TEXT.register_by_number_confirm.format(flat.id))
-        addButton(markup, REGISTER_ACTION, TEXT.register_by_number_cancel)
+        buttons = []
+        floors = flat.get_floors_for_check()
+        for floor in floors:
+            addButton(buttons, REGISTER_ACTION, TEXT.register_by_number_floor_check.format(flat.id, floor))
+        markup = tg.types.InlineKeyboardMarkup(row_width=2)  # TODO генерация для проверки этажа
+        markup.add(*buttons)
         addButton(markup, GENERAL_ACTION, TEXT.main_menu)
-        bot.send_message(tg_id, TEXT.welcome_register_flat_confirm.format(flat.id), reply_markup=markup)
+        bot.send_message(tg_id, TEXT.welcome_register_flat_choose_floor.format(flat.id), reply_markup=markup)
     else:
         print("13")
         bot.send_message(tg_id, TEXT.register_by_number_reinput)
@@ -289,10 +301,21 @@ def register(call):
         bot.send_message(tg_id, "Пожалуйста напишите название Вашей компании без кавычек")
         bot.register_next_step_handler(call.message, register_with_commerce)
         pass
+
+    elif call_data.split(':')[0] == TEXT.register_by_number_floor_check.split(':')[0]:
+        d = call.data.split(' на ')
+        flat_id = d[0].split(': ')[1]
+        floor = d[1].split(': ')[1]
+        markup = tg.types.InlineKeyboardMarkup()
+        addButton(markup, REGISTER_ACTION, TEXT.register_by_number_confirm.format(flat_id, floor))
+        addButton(markup, REGISTER_ACTION, TEXT.register_by_number_cancel)
+        bot.send_message(tg_id, TEXT.welcome_register_flat_confirm.format(flat_id, floor), reply_markup=markup)
     elif call_data.split(':')[0] == TEXT.register_by_number_confirm.split(':')[0]:
-        print("04")
-        flat_id = int(call.data.split(': ')[1])
-        add_user(tg_id, tg_chat_id, flat_id)
+        print("012")
+        d = call.data.split(' на ')
+        flat_id = d[0].split(': ')[1]
+        floor = d[1].split(': ')[1]
+        add_user(tg_id, tg_chat_id, get_id_from_text(flat_id), get_id_from_text(floor))
         start(call)
     elif call_data == TEXT.register_approve:
         print("07")
@@ -397,14 +420,16 @@ def neighbors(call):
         print("WTF neighbors WTF")
         bot.send_message(tg_id, TEXT.error.format('neighbors'))
     message_text = "Контакты ⤵️"
-    markup = tg.types.InlineKeyboardMarkup(row_width=1)
+    markup = tg.types.InlineKeyboardMarkup(row_width=3)
+    buttons = []
     if n_list:
         for i, neighbor in enumerate(n_list):
             text = '{}) 🙊'.format(i + 1)
             if neighbor.flat_id:
                 text = '{}) {}'.format(i + 1, neighbor.flat_id)
             button = tg.types.InlineKeyboardButton(text, url='tg://user?id={}'.format(neighbor.id))
-            markup.add(button)
+            buttons.append(button)
+        markup.add(*buttons)
     else:
         if call_data not in (TEXT.get_house_commerce, TEXT.get_entrance_neighbors):
             addButton(markup, NEIGHBORS_ACTION, TEXT.get_entrance_neighbors)
