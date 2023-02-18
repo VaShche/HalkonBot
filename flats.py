@@ -129,9 +129,9 @@ class Flat(object):
         step = math.floor(max_floor/4)
         floors = [self.floor]
         while len(floors) < 4:
-            next_floor = floors[-1] + step
-            if next_floor > max_floor:
-                next_floor = next_floor - max_floor + min_floor
+            next_floor = floors[-1] - step
+            if next_floor < min_floor:
+                next_floor = max_floor - (min_floor - next_floor)
             floors.append(next_floor)
         floors.sort()
         return floors
@@ -258,4 +258,4 @@ class FlatsTest(unittest.TestCase):
         f = Flat(1, 1, 6)
         self.assertEqual(f.get_floors_for_check(), [2, 4, 6, 8])
         f = Flat(1, 1, 7)
-        self.assertEqual(f.get_floors_for_check(), [3, 5, 7, 9])
+        self.assertEqual(f.get_floors_for_check(), [1, 3, 5, 7])
