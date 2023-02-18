@@ -1,4 +1,5 @@
 import telebot as tg
+import logging as log
 import func
 import flats
 import text as TEXT
@@ -6,6 +7,8 @@ from constants import *
 import settings
 
 config = settings.config
+log.basicConfig(filename='halkon.log', format='%(asctime)s %(levelname)s %(message)s',
+                encoding='utf-8', level=log.INFO)
 bot = tg.TeleBot(config['BOT']['token'])
 chat_id = config['BOT']['chatid']
 data_file_path = config['BOT']['data']
@@ -15,8 +18,8 @@ house_dict = func.load_dict_from_file(data_file_path, key=config['BOT']['cryptok
 if not house_dict:
     house_dict = flats.getHalkonFlatsStruct()
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
-else:
-    print(len(flats.getAllHouseResidents(house_dict)))
+
+log.info('Started. Users: %s', len(flats.getAllHouseResidents(house_dict)))
 
 
 def get_admins_ids():
@@ -89,18 +92,18 @@ def send_user_info_wrapper(to_chat_id, message_text, markup, parse_mode=None, di
         except Exception:
             bot.send_message(config['BOT']['servicechatid'],
                              'EROOR with sending to tg://user?id={}'.format(to_chat_id))
-        print('fffff')
+        log.warning('send_user_info_wrapper for : %s', to_chat_id)
 
 
-def add_user(tg_id, tg_chat_id, flat_id, floor_for_check=None):
+def add_user(tg_id, tg_chat_id, flat_id, floor_for_check=None, user_name=''):
     print(tg_id, tg_chat_id, flat_id)
+    log.info('add_user %s to %s', tg_id, flat_id)
 
     flat = flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_id)
     if floor_for_check:
-        print(flat.floor, floor_for_check)
         if flat.floor != floor_for_check:
             # перевод интерес пользователя если он наврал с этажём
-            print('alert!')
+            log.warning('alert %s != %s', flat.floor, floor_for_check)
             bot.send_message(config['BOT']['servicechatid'], "Следующий Интересующийся не прошёл проверку этажём")
             add_to_other(INTERESTED, tg_id, tg_chat_id)
             bot.send_message(tg_chat_id, '''Ой ой ой, Вы точно ошиблись при нашем знакомстве...
@@ -118,14 +121,15 @@ def add_user(tg_id, tg_chat_id, flat_id, floor_for_check=None):
     for n in notify_neighbors:
         if n.chat_id != tg_chat_id:
             send_user_info_wrapper(n.chat_id,
-                                   TEXT.new_neighbor.format(tg_id, ''),
+                                   TEXT.new_neighbor.format(tg_id, user_name),
                                    markup, parse_mode='HTML', disable_notification=True)
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     pass
 
 
-def del_user(tg_id, del_by_tg_id):
+def del_user(tg_id, del_by_tg_id, user_name):
     print(tg_id)
+    log.info('del_user %s to %s', tg_id, del_by_tg_id)
     flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
     if not flat:
         bot.send_message(tg_id, 'нет такого')
@@ -134,7 +138,7 @@ def del_user(tg_id, del_by_tg_id):
     flat.removeResident(tg_id)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
 
-    markup = users_link_markup(tg_id, tg_id)
+    markup = users_link_markup(tg_id, user_name)
     send_user_info_wrapper(del_by_tg_id, 'Удалён', markup)
     send_user_info_wrapper(config['BOT']['servicechatid'], 'Удалён', markup)
     # TODO уведомить соседей
@@ -183,9 +187,11 @@ def register_with_number(message):
 def get_another_id(message):
     if message.forward_from:
         another_tg_id = message.forward_from.id
+        another_user_name = message.forward_from.first_name
     else:
         another_tg_id = get_id_from_text(message.text)
-    return another_tg_id
+        another_user_name = message.text
+    return another_tg_id, another_user_name
 
 
 def register_another_user(message):
@@ -195,7 +201,7 @@ def register_another_user(message):
     if not from_user_person.adding_user_id:
         '''Получение ID пользователя
         '''
-        another_tg_id = get_another_id(message)
+        another_tg_id, another_user_name = get_another_id(message)
         if another_tg_id:
             from_user_person.adding_user_id = another_tg_id
             print(another_tg_id)
@@ -229,9 +235,9 @@ def register_another_user(message):
 def remove_another_user(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    another_tg_id = get_another_id(message)
+    another_tg_id, another_user_name = get_another_id(message)
     if another_tg_id:
-        del_user(another_tg_id, tg_id)
+        del_user(another_tg_id, tg_id, another_user_name)
         start(message)
     else:
         bot.send_message(tg_id, TEXT.unsuccessful)
@@ -241,9 +247,9 @@ def remove_another_user(message):
 def ban_another_user(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    another_tg_id = get_another_id(message)
+    another_tg_id, another_user_name = get_another_id(message)
     if another_tg_id:
-        del_user(another_tg_id, tg_id)
+        del_user(another_tg_id, tg_id, another_user_name)
         add_to_other(BAN, another_tg_id, another_tg_id)
     else:
         bot.send_message(tg_id, TEXT.unsuccessful)
@@ -272,7 +278,7 @@ def register_with_commerce(message):
     start(message)
 
 
-def add_to_other(other_type, tg_id, tg_chat_id):
+def add_to_other(other_type, tg_id, tg_chat_id, user_name=''):
     flat = flats.Flat.findByFlatID(house_dict.get(OTHER, []), other_type)
     if not flat:
         flat = flats.Flat(other_type, OTHER, 1)
@@ -281,7 +287,7 @@ def add_to_other(other_type, tg_id, tg_chat_id):
         house_dict.get(OTHER).append(flat)
     flat.addResident(tg_id, tg_chat_id)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
-    markup = users_link_markup(tg_id, other_type)
+    markup = users_link_markup(tg_id, '{} {}'.format(other_type, user_name))
     send_user_info_wrapper(config['BOT']['servicechatid'], str(tg_id), markup,
                            parse_mode='HTML', disable_notification=True)
 
@@ -290,7 +296,7 @@ def add_to_other(other_type, tg_id, tg_chat_id):
 def register(call):
     call_data = getCallbackData(call)
     tg_id = call.from_user.id
-    print('{} in "register" with "{}"'.format(tg_id, call_data))
+    log.info('%s in "register" with "%s"', tg_id, call_data)
     tg_chat_id = call.message.chat.id
     bot.send_chat_action(tg_id, 'typing')
     bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
@@ -346,7 +352,8 @@ def register(call):
         d = call.data.split(' на ')
         flat_id = d[0].split(': ')[1]
         floor = d[1].split(': ')[1]
-        add_user(tg_id, tg_chat_id, get_id_from_text(flat_id), get_id_from_text(floor))
+        add_user(tg_id, tg_chat_id, get_id_from_text(flat_id), get_id_from_text(floor),
+                 user_name=call.from_user.first_name)
         start(call)
     elif call_data == TEXT.register_approve:
         print("07")
@@ -376,7 +383,8 @@ def register(call):
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
         addButton(markup, REGISTER_ACTION, TEXT.register_interested_im_shure)
         addButton(markup, GENERAL_ACTION, TEXT.main_menu)
-        bot.send_message(tg_id, "Вы указали, что не имеете никакого отношения к ЖК Халькон, а только интересуетесь. Верно? ⤵️",
+        bot.send_message(tg_id,
+                         "Вы указали, что не имеете никакого отношения к ЖК Халькон, а только интересуетесь. Верно? ⤵️",
                          reply_markup=markup)
         pass
     elif call_data == TEXT.register_living_close_im_shure:
@@ -400,7 +408,7 @@ def register(call):
 def neighbors(call):
     call_data = getCallbackData(call)
     tg_id = call.from_user.id
-    print('{} in "neighbors" with "{}"'.format(tg_id, call_data))
+    log.info('%s in "neighbors" with "%s"', tg_id, call_data)
     bot.send_chat_action(tg_id, 'typing')
     bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
     flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
@@ -436,7 +444,7 @@ def neighbors(call):
         print("WTF neighbors WTF")
         bot.send_message(tg_id, TEXT.error.format('neighbors'))
     message_text = "Контакты ⤵️"
-    markup = tg.types.InlineKeyboardMarkup(row_width=3)
+    markup = tg.types.InlineKeyboardMarkup(row_width=2)
     buttons = []
     if n_list:
         for i, neighbor in enumerate(n_list):
@@ -478,7 +486,7 @@ def send_idea(message):
 def advert(call):
     call_data = getCallbackData(call)
     tg_id = call.from_user.id
-    print('{} in "advert" with "{}"'.format(tg_id, call_data))
+    log.info('%s in "advert" with "%s"', tg_id, call_data)
     if call_data == TEXT.make_post:
         '''объявление на модерацию
         '''
@@ -498,7 +506,7 @@ def advert(call):
 def general(call):
     call_data = getCallbackData(call)
     tg_id = call.from_user.id
-    print('{} in "general" with "{}"'.format(tg_id, call_data))
+    log.info('%s in "general" with "%s"', tg_id, call_data)
     if call_data == TEXT.main_menu:
         '''назад в главное
         '''
@@ -580,7 +588,10 @@ def bot_all_messages_handler(message):
 def start(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    print('{} in "start"'.format(tg_id))
+    log.info('%s in "start"', tg_id)
+    bot.send_message(config['BOT']['adminid'],
+                     '<a href="tg://user?id={}">{}</a> в старте 🐉'.format(tg_id, message.from_user.first_name),
+                     parse_mode='HTML', disable_notification=True)
     # print(message.forward_from.id)
     registered_user = None
     registered_user_flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
@@ -663,4 +674,4 @@ if True:
     try:
         bot.polling(none_stop=True)
     finally:
-        print('zzz')
+        log.error('zzz')
