@@ -1,4 +1,5 @@
 import unittest
+import math
 from constants import *
 
 class Resident(object):
@@ -49,6 +50,7 @@ class Flat(object):
     residents = []
     up_residents = []
     down_residents = []
+    wall_residents = []
 
     def __init__(self, number, entrance, floor, up_residents=None, down_residents=None):
         self.id = number
@@ -63,6 +65,7 @@ class Flat(object):
             self.down_residents = down_residents
         else:
             self.down_residents = []
+        self.wall_residents = []
 
     def __str__(self):
         return '(Flat №{0}, floor {1}, en {2}: {3} | ({4},{5}))'.format(self.id, self.floor,
@@ -121,6 +124,17 @@ class Flat(object):
         if not neighbors_list:
             neighbors_list = getAllHouseResidents(flats_dict)
         return neighbors_list
+
+    def get_floors_for_check(self, max_floor=9, min_floor=1):
+        step = math.floor(max_floor/4)
+        floors = [self.floor]
+        while len(floors) < 4:
+            next_floor = floors[-1] + step
+            if next_floor > max_floor:
+                next_floor = next_floor - max_floor + min_floor
+            floors.append(next_floor)
+        floors.sort()
+        return floors
 
     @staticmethod
     def findByFlatID(flats_list, flat_id):
@@ -233,3 +247,15 @@ class FlatsTest(unittest.TestCase):
 
         print(getAllHouseFlats(getHalkonFlatsStruct()))
         print(getAllHouseResidents(getHalkonFlatsStruct()))
+
+    def test_get_floors_for_check(self):
+        f = Flat(1, 1, 1)
+        self.assertEqual(f.get_floors_for_check(), [1, 3, 5, 7])
+        f = Flat(1, 1, 9)
+        self.assertEqual(f.get_floors_for_check(), [3, 5, 7, 9])
+        f = Flat(1, 1, 8)
+        self.assertEqual(f.get_floors_for_check(), [2, 4, 6, 8])
+        f = Flat(1, 1, 6)
+        self.assertEqual(f.get_floors_for_check(), [2, 4, 6, 8])
+        f = Flat(1, 1, 7)
+        self.assertEqual(f.get_floors_for_check(), [3, 5, 7, 9])
