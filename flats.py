@@ -2,6 +2,7 @@ import unittest
 import math
 from constants import *
 
+
 class Resident(object):
     id = None
     chat_id = None
@@ -12,8 +13,8 @@ class Resident(object):
     adding_user_id = None
     adding_user_flat_id = None
 
-    def __init__(self, id, chat_id, flat_id=None):
-        self.id = id
+    def __init__(self, tg_id, chat_id, flat_id=None):
+        self.id = tg_id
         self.chat_id = chat_id
         self.flat_id = flat_id
         self.status_id = 0
@@ -96,14 +97,20 @@ class Flat(object):
 
     def getUpNeighbors(self, flats_in_entrance_list):
         neighbors = []
-        for id in self.up_residents:
-            neighbors += self.findByFlatID(flats_in_entrance_list, id).residents
+        for tg_id in self.up_residents:
+            neighbors += self.findByFlatID(flats_in_entrance_list, tg_id).residents
         return neighbors
 
     def getDownNeighbors(self, flats_in_entrance_list):
         neighbors = []
-        for id in self.down_residents:
-            neighbors += self.findByFlatID(flats_in_entrance_list, id).residents
+        for tg_id in self.down_residents:
+            neighbors += self.findByFlatID(flats_in_entrance_list, tg_id).residents
+        return neighbors
+
+    def get_wall_neighbors(self, all_home_flats):
+        neighbors = []
+        for tg_id in self.wall_residents:
+            neighbors += self.findByFlatID(all_home_flats, tg_id).residents
         return neighbors
 
     def getAllNeighbors(self, flats_in_entrance_list, with_same_flat_residents=True):
@@ -158,26 +165,26 @@ def getFlatsAtEntranceStruct(entrance_id, first_flat, last_flat, first_floor, fl
     :param last_flat: № of last flat in entrance
     :param first_floor: № of first floor with flats
     :param flats_count: count of flats at floor
-    :param start_counter: in case of less flats on first floor
+    :param start_counter: in case of fewer flats on first floor
     :return: list of Flats objects for entrance
     """
     flats = []
     i = start_counter
     floor = first_floor
     flats_list = list(range(first_flat, last_flat + 1))
-    for id in flats_list:
+    for flat_id in flats_list:
         if i == flats_count:
             i = 0
             floor += 1
             flats.append(Flat(None, entrance_id, floor))  # for case when we have only floor and entrance
         i += 1
         up_id = []
-        if id + flats_count in flats_list:
-            up_id = [id + flats_count]
+        if flat_id + flats_count in flats_list:
+            up_id = [flat_id + flats_count]
         down_id = []
-        if id - flats_count in flats_list:
-            down_id = [id - flats_count]
-        flats.append(Flat(id, entrance_id, floor, up_id, down_id))
+        if flat_id - flats_count in flats_list:
+            down_id = [flat_id - flats_count]
+        flats.append(Flat(flat_id, entrance_id, floor, up_id, down_id))
     return flats
 
 
@@ -209,6 +216,7 @@ def getHalkonFlatsStruct():
     entrance = OTHER
     halkon_flats[entrance] = [Flat(BAN, entrance, 1), Flat(INTERESTED, entrance, 1), Flat(CLOSELIVING, entrance, 1)]
     return halkon_flats
+
 
 def getAllHouseFlats(house_dict):
     flats_list = []
