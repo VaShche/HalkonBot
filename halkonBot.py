@@ -412,6 +412,7 @@ def neighbors(call):
     bot.send_chat_action(tg_id, 'typing')
     bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
     flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
+    resident = flat.find_resident(tg_id)
     if not flat:
         start(call)
         return 0
@@ -437,18 +438,20 @@ def neighbors(call):
     elif flat.id and call_data == TEXT.get_up_neighbors:
         '''контакты соседей выше
         '''
-        n_list = flat.getUpNeighbors(house_dict.get(flat.entrance))
+        n_list = flat.getUpNeighbors(flats.getAllHouseFlats(house_dict))
     elif flat.id and call_data == TEXT.get_down_neighbors:
         '''контакты соседей ниже
         '''
-        n_list = flat.getDownNeighbors(house_dict.get(flat.entrance))
+        n_list = flat.getDownNeighbors(flats.getAllHouseFlats(house_dict))
     else:
         print("WTF neighbors WTF")
         bot.send_message(tg_id, TEXT.error.format('neighbors'))
+    if resident in n_list:
+        n_list.remove(resident)
     message_text = "Контакты ⤵️"
     markup = tg.types.InlineKeyboardMarkup(row_width=2)
-    buttons = []
     if n_list:
+        buttons = []
         for i, neighbor in enumerate(n_list):
             text = '{}) 🙊'.format(i + 1)
             if neighbor.flat_id:

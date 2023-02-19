@@ -95,16 +95,16 @@ class Flat(object):
                 neighbors += f.residents
         return neighbors
 
-    def getUpNeighbors(self, flats_in_entrance_list):
+    def getUpNeighbors(self, all_home_flats):
         neighbors = []
         for tg_id in self.up_residents:
-            neighbors += self.findByFlatID(flats_in_entrance_list, tg_id).residents
+            neighbors += self.findByFlatID(all_home_flats, tg_id).residents
         return neighbors
 
-    def getDownNeighbors(self, flats_in_entrance_list):
+    def getDownNeighbors(self, all_home_flats):
         neighbors = []
         for tg_id in self.down_residents:
-            neighbors += self.findByFlatID(flats_in_entrance_list, tg_id).residents
+            neighbors += self.findByFlatID(all_home_flats, tg_id).residents
         return neighbors
 
     def get_wall_neighbors(self, all_home_flats):
@@ -124,8 +124,10 @@ class Flat(object):
         if len(self.residents) > 1:
             return self.residents
         flats_list = flats_dict.get(self.entrance)
+        all_flats_list = getAllHouseFlats(flats_dict)
         neighbors_list = self.getFloorNeighbors(flats_list, with_same_flat_residents=False)
-        neighbors_list += self.getUpNeighbors(flats_list) + self.getDownNeighbors(flats_list)
+        neighbors_list += self.getUpNeighbors(all_flats_list)
+        neighbors_list += self.getDownNeighbors(all_flats_list)
         if not neighbors_list:
             neighbors_list = self.getAllNeighbors(flats_list)
         if not neighbors_list:
