@@ -211,6 +211,11 @@ def getHalkonFlatsStruct():
     '''#4 '''
     entrance = 'Парадная №4'
     halkon_flats[entrance] = getFlatsAtEntranceStruct(entrance, 58, 72, first_floor=2, flats_count=2, start_counter=1)
+    l1 = [42, 44, 46, 48, 50, 52, 54, 43, 45, 47, 49, 51, 53, 55, 57]
+    l2 = [23, 26, 29, 32, 35, 38, 41, 58, 59, 61, 63, 65, 67, 69, 71]
+    for i, n in enumerate(l1):
+        Flat.findByFlatID(getAllHouseFlats(halkon_flats), n).wall_residents.append(l2[i])
+        Flat.findByFlatID(getAllHouseFlats(halkon_flats), l2[i]).wall_residents.append(n)
     '''коммерция'''
     entrance = COMMERCE
     halkon_flats[entrance] = [Flat(None, entrance, 1)]
