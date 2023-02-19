@@ -531,9 +531,13 @@ def general(call):
         '''
         bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
-        addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
-        addButton(markup, NEIGHBORS_ACTION, TEXT.get_up_neighbors)
-        addButton(markup, NEIGHBORS_ACTION, TEXT.get_down_neighbors)
+        registered_user_flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
+        if registered_user_flat:
+            if registered_user_flat.up_residents:
+                addButton(markup, NEIGHBORS_ACTION, TEXT.get_up_neighbors)
+            addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
+            if registered_user_flat.down_residents:
+                addButton(markup, NEIGHBORS_ACTION, TEXT.get_down_neighbors)
         addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, 'Доступные действия ⤵️', reply_markup=markup)
     elif call_data == TEXT.statistics:
