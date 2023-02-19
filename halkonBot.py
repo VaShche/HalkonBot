@@ -420,6 +420,8 @@ def neighbors(call):
         '''контакты соседей по этажу
         '''
         n_list = flat.getFloorNeighbors(house_dict.get(flat.entrance))
+        if flat.wall_residents:
+            n_list += flat.get_wall_neighbors(flats.getAllHouseFlats(house_dict))
     elif call_data == TEXT.get_entrance_neighbors:
         '''контакты соседей по парадной
         '''
@@ -538,6 +540,7 @@ def general(call):
             addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
             if registered_user_flat.down_residents:
                 addButton(markup, NEIGHBORS_ACTION, TEXT.get_down_neighbors)
+            addButton(markup, NEIGHBORS_ACTION, TEXT.get_entrance_neighbors)
         addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, 'Доступные действия ⤵️', reply_markup=markup)
     elif call_data == TEXT.statistics:
