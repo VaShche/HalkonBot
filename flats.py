@@ -126,6 +126,7 @@ class Flat(object):
         flats_list = flats_dict.get(self.entrance)
         all_flats_list = getAllHouseFlats(flats_dict)
         neighbors_list = self.getFloorNeighbors(flats_list, with_same_flat_residents=False)
+        neighbors_list += self.get_wall_neighbors(all_flats_list)
         neighbors_list += self.getUpNeighbors(all_flats_list)
         neighbors_list += self.getDownNeighbors(all_flats_list)
         if not neighbors_list:
