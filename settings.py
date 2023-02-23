@@ -8,6 +8,7 @@ if os.path.exists('settings.ini'):
     conf.read('settings.ini')
     os.environ["HALKONBOT_BOT_TOKEN"] = str(conf['BOT']['token'])
     os.environ["HALKONBOT_BOT_CHAT"] = str(conf['BOT']['chatid'])
+    os.environ["HALKONBOT_BOT_CHANNEL"] = str(conf['BOT']['channelid'])
     os.environ["HALKONBOT_BOT_SERVICECHAT"] = str(conf['BOT']['servicechatid'])
     os.environ["HALKONBOT_BOT_DATA"] = str(conf['BOT']['data'])
     os.environ["HALKONBOT_BOT_LINK"] = str(conf['BOT']['invitelink'])
@@ -20,6 +21,7 @@ if os.path.exists('settings.ini'):
 
 config['BOT']['token'] = os.getenv("HALKONBOT_BOT_TOKEN")
 config['BOT']['chatid'] = os.getenv("HALKONBOT_BOT_CHAT")
+config['BOT']['channelid'] = os.getenv("HALKONBOT_BOT_CHANNEL")
 config['BOT']['servicechatid'] = os.getenv("HALKONBOT_BOT_SERVICECHAT")
 config['BOT']['data'] = os.getenv("HALKONBOT_BOT_DATA")
 config['BOT']['invitelink'] = os.getenv("HALKONBOT_BOT_LINK")

@@ -115,6 +115,10 @@ def add_user(tg_id, tg_chat_id, flat_id, floor_for_check=None, user_name=''):
 
     markup = users_link_markup(tg_id, 'Квартира №{}'.format(flat_id))
     notify_neighbors = flat.closest_neighbors(house_dict)
+    confirm_buttons = []
+    addButton(confirm_buttons, GENERAL_ACTION, '✅ Верно', 'Верно'+tg_id)  # TODO реализовать подтверждение
+    addButton(confirm_buttons, GENERAL_ACTION, '⛔️ Неправда', 'Неправда' + tg_id)  # TODO реализовать подтверждение
+    markup.add(*confirm_buttons)
     send_user_info_wrapper(config['BOT']['servicechatid'],
                            TEXT.new_neighbor.format(tg_id, flats.Resident.getResidentsIDs(notify_neighbors)),
                            markup, parse_mode='HTML')
@@ -487,12 +491,28 @@ def send_idea(message):
     start(message)
 
 
+def send_post(message):
+    tg_id = message.from_user.id
+    bot.send_chat_action(tg_id, 'typing')
+    if len(message.text) < 3:  # TODO а если картинку?
+        result = '❌ Сообщение не может быть короче трёх символов.'
+    else:
+        message_text = '''{}
+------
+{} {}'''.format(message.text, message.from_user.first_name, message.from_user.last_name)
+        bot.send_message(config['BOT']['channelid'], message_text)
+        #bot.forward_message(config['BOT']['adminid'], message.chat.id, message.message_id)
+        result = '✅ Сообщение отправлено в @Halvon_SPb'
+    bot.send_message(tg_id, result)
+    start(message)
+
+
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == ADVERT_ACTION)
 def advert(call):
     call_data = getCallbackData(call)
     tg_id = call.from_user.id
     log.info('%s in "advert" with "%s"', tg_id, call_data)
-    if call_data == TEXT.make_post:
+    if call_data == TEXT.make_advert:
         '''объявление на модерацию
         '''
         bot.send_message(tg_id, 'Отправьте пожалуйста объявление одним сообщением. После модерации оно будет перенаправлено в @Halkon_SPb:')
@@ -502,6 +522,11 @@ def advert(call):
         '''
         bot.send_message(tg_id, 'Напишите пожалуйста ваши идеи/предложения для отправки разработчику:')
         bot.register_next_step_handler(call.message, send_idea)
+    elif call_data == TEXT.make_post:
+        '''сообщение от проверенного в канал
+        '''
+        bot.send_message(tg_id, 'Напишите пожалуйста ваше сообщение. Оно будет опубликовано от имени канала в @Halkon_SPb. Ваше имя будет добавлено в подпись к сообщению. Для отмены отправьте любую букву.')
+        bot.register_next_step_handler(call.message, send_post)
     else:
         print("WTF advert WTF")
         bot.send_message(tg_id, TEXT.error.format('advert'))
@@ -659,6 +684,10 @@ def start(message):
             ''' подтверждённый пользователь
             '''
             print(2)
+            addButton(markup, ADVERT_ACTION, TEXT.make_post)  # TODO реализовать отправку
+            pass
+        if str(registered_user.id) == str(config['BOT']['adminid']):
+            print('admin')
             addButton(markup, GENERAL_ACTION, TEXT.admin_actions)
             pass
         if registered_user.flat_id not in (CLOSELIVING, INTERESTED):
@@ -675,7 +704,7 @@ def start(message):
         text_for_message = TEXT.welcome_first
         addButton(markup, REGISTER_ACTION, TEXT.register_start)
 
-    addButton(markup, ADVERT_ACTION, TEXT.make_post)
+    addButton(markup, ADVERT_ACTION, TEXT.make_advert)
     addButton(markup, ADVERT_ACTION, TEXT.todo_for_bot)
     bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
