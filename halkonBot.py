@@ -64,7 +64,7 @@ def getCallbackData(call):
 
 
 def users_link_markup(tg_id, name):
-    markup = tg.types.InlineKeyboardMarkup()
+    markup = tg.types.InlineKeyboardMarkup(row_width=2)
     button = tg.types.InlineKeyboardButton(str(name), url='tg://user?id={}'.format(tg_id))
     markup.add(button)
     return markup
@@ -116,8 +116,8 @@ def add_user(tg_id, tg_chat_id, flat_id, floor_for_check=None, user_name=''):
     markup = users_link_markup(tg_id, 'Квартира №{}'.format(flat_id))
     notify_neighbors = flat.closest_neighbors(house_dict)
     confirm_buttons = []
-    addButton(confirm_buttons, GENERAL_ACTION, '✅ Верно', 'Верно'+tg_id)  # TODO реализовать подтверждение
-    addButton(confirm_buttons, GENERAL_ACTION, '⛔️ Неправда', 'Неправда' + tg_id)  # TODO реализовать подтверждение
+    addButton(confirm_buttons, GENERAL_ACTION, '✅ Верно', 'Верно'+str(tg_id))  # TODO реализовать подтверждение
+    addButton(confirm_buttons, GENERAL_ACTION, '⛔️ Неправда', 'Неправда' + str(tg_id))  # TODO реализовать подтверждение
     markup.add(*confirm_buttons)
     send_user_info_wrapper(config['BOT']['servicechatid'],
                            TEXT.new_neighbor.format(tg_id, flats.Resident.getResidentsIDs(notify_neighbors)),
@@ -479,7 +479,7 @@ def send_advert(message):
     bot.send_message(config['BOT']['servicechatid'], 'Объявление на модерацию для канала:')
     bot.forward_message(config['BOT']['servicechatid'], message.chat.id, message.message_id)
     bot.send_message(tg_id, '✅ Сообщение отправлено на модерацию. После неё оно будет опубликовано в @Halkon_SPb')
-    start(message)
+    #start(message)
 
 
 def send_idea(message):
@@ -488,23 +488,33 @@ def send_idea(message):
     bot.send_message(config['BOT']['adminid'], 'Идея для бота:')
     bot.forward_message(config['BOT']['adminid'], message.chat.id, message.message_id)
     bot.send_message(tg_id, '✅ Сообщение отправлено разработчику. Спасибо!')
-    start(message)
+    #start(message)
 
 
 def send_post(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    if len(message.text) < 3:  # TODO а если картинку?
-        result = '❌ Сообщение не может быть короче трёх символов.'
+    last_name = ''
+    if message.from_user.last_name:
+        last_name = message.from_user.last_name
+    message_text = '''
+———
+<a href="tg://user?id={}">{} {}</a>'''.format(tg_id, message.from_user.first_name, last_name)
+    result = '✅ Сообщение отправлено в @Halvon_SPb'
+    if message.content_type == 'text':
+        if len(message.text) < 3:  # TODO а если картинку?
+            result = '❌ Сообщение не может быть короче трёх символов.'
+        else:
+            message_text = message.text + message_text
+            bot.send_message(config['BOT']['channelid'], message_text, parse_mode='HTML')
+    elif message.content_type == 'photo':
+        photo = message.photo
+        message_text = message.caption + message_text
+        bot.send_photo(config['BOT']['channelid'], photo[-1].file_id, caption=message_text, parse_mode='HTML')
     else:
-        message_text = '''{}
-------
-{} {}'''.format(message.text, message.from_user.first_name, message.from_user.last_name)
-        bot.send_message(config['BOT']['channelid'], message_text)
-        #bot.forward_message(config['BOT']['adminid'], message.chat.id, message.message_id)
-        result = '✅ Сообщение отправлено в @Halvon_SPb'
+        result = '❌ Отправка {} пока не поддерживается'.format(message.content_type)
     bot.send_message(tg_id, result)
-    start(message)
+    #start(message)
 
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == ADVERT_ACTION)
