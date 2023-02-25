@@ -479,7 +479,7 @@ def send_advert(message):
     bot.send_message(config['BOT']['servicechatid'], 'Объявление на модерацию для канала:')
     bot.forward_message(config['BOT']['servicechatid'], message.chat.id, message.message_id)
     bot.send_message(tg_id, '✅ Сообщение отправлено на модерацию. После неё оно будет опубликовано в @Halkon_SPb')
-    #start(message)
+    start(message)
 
 
 def send_idea(message):
@@ -488,7 +488,7 @@ def send_idea(message):
     bot.send_message(config['BOT']['adminid'], 'Идея для бота:')
     bot.forward_message(config['BOT']['adminid'], message.chat.id, message.message_id)
     bot.send_message(tg_id, '✅ Сообщение отправлено разработчику. Спасибо!')
-    #start(message)
+    start(message)
 
 
 def send_post(message):
@@ -502,19 +502,24 @@ def send_post(message):
 <a href="tg://user?id={}">{} {}</a>'''.format(tg_id, message.from_user.first_name, last_name)
     result = '✅ Сообщение отправлено в @Halvon_SPb'
     if message.content_type == 'text':
-        if len(message.text) < 3:  # TODO а если картинку?
+        if len(message.text) < 3:
             result = '❌ Сообщение не может быть короче трёх символов.'
         else:
             message_text = message.text + message_text
             bot.send_message(config['BOT']['channelid'], message_text, parse_mode='HTML')
-    elif message.content_type == 'photo':
-        photo = message.photo
-        message_text = message.caption + message_text
-        bot.send_photo(config['BOT']['channelid'], photo[-1].file_id, caption=message_text, parse_mode='HTML')
     else:
-        result = '❌ Отправка {} пока не поддерживается'.format(message.content_type)
+        print(message.content_type)
+        if message.content_type in ['poll', 'sticker']:
+            message_text = 'От <a href="tg://user?id={}">{} {}</a>:'.format(tg_id,
+                                                                            message.from_user.first_name, last_name)
+            bot.send_message(config['BOT']['channelid'], message_text, parse_mode='HTML', disable_notification=True)
+            message_text = None
+        if message.caption:
+            message_text = message.caption + message_text
+        bot.copy_message(config['BOT']['channelid'], tg_id, message.id,
+                         caption=message_text, parse_mode='HTML', allow_sending_without_reply=True)
     bot.send_message(tg_id, result)
-    #start(message)
+    start(message)
 
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == ADVERT_ACTION)
@@ -522,6 +527,7 @@ def advert(call):
     call_data = getCallbackData(call)
     tg_id = call.from_user.id
     log.info('%s in "advert" with "%s"', tg_id, call_data)
+    bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
     if call_data == TEXT.make_advert:
         '''объявление на модерацию
         '''
