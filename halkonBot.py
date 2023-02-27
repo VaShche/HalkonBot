@@ -30,7 +30,7 @@ def get_admins_ids():
     return ids
 
 
-def set_admin(tg_id):
+def set_chat_admin(tg_id):
     pass
     '''
     promoteChatMember
@@ -142,8 +142,8 @@ def add_user(tg_id, tg_chat_id, flat_id, floor_for_check=None):
     markup = users_link_markup(tg_id, 'Квартира №{}'.format(flat_id))
     notify_neighbors = flat.closest_neighbors(house_dict)
     confirm_buttons = []
-    addButton(confirm_buttons, NEWUSER_ACTION, '✅ Верно', 'Верно'+str(tg_id))  # TODO реализовать подтверждение
-    addButton(confirm_buttons, NEWUSER_ACTION, '⛔️ Неправда', 'Неправда' + str(tg_id))  # TODO реализовать подтверждение
+    addButton(confirm_buttons, NEWUSER_ACTION, TEXT.newuser_confirm, '{}:{}'.format(TEXT.newuser_confirm, tg_id))  # TODO реализовать подтверждение
+    addButton(confirm_buttons, NEWUSER_ACTION, TEXT.newuser_ban, '{}:{}'.format(TEXT.newuser_ban, tg_id))  # TODO реализовать подтверждение
     markup.add(*confirm_buttons)
     send_user_info_wrapper(config['BOT']['servicechatid'],
                            TEXT.new_neighbor.format(user_name, tg_id, flats.Resident.getResidentsIDs(notify_neighbors)),
@@ -179,10 +179,6 @@ def del_user(tg_id, del_by_tg_id, user_name):
     '''
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     return tg_id
-
-
-def confirm_user(another_tg_id, tg_id):  # TODO добавить установку админского статуса
-    pass
 
 
 def get_id_from_text(message_text):
@@ -255,7 +251,6 @@ def register_another_user(message):
             from_user_person.adding_user_id = None
             from_user_person.adding_user_flat_id = None
             add_user(another_tg_id, another_tg_id, flat_number)
-            confirm_user(another_tg_id, tg_id)  # TODO добавить проверку на то, что пользователь в чате
             start(message)
         else:
             bot.send_message(tg_id, TEXT.register_by_number_reinput)
@@ -274,9 +269,15 @@ def remove_another_user(message):
         start(message)
 
 
-def ban_user(tg_id, by_tg_id, banned_name=''):
+def ban_user(tg_id, by_tg_id):
+    banned_name = get_user_name(tg_id)
     del_user(tg_id, by_tg_id, banned_name)
     add_to_other(BAN, tg_id, tg_id)
+
+
+def promote_user(tg_id, by_tg_id):
+    bot.send_message(by_tg_id, "ещё не пашет")
+    # TODO установить верифицированного пользователя, попробовать set_chat_admin
 
 
 def ban_another_user(message):
@@ -284,7 +285,7 @@ def ban_another_user(message):
     bot.send_chat_action(tg_id, 'typing')
     another_tg_id, another_user_name = get_another_id(message)
     if another_tg_id:
-        ban_user(tg_id=another_tg_id, by_tg_id=tg_id, banned_name=another_user_name)
+        ban_user(tg_id=another_tg_id, by_tg_id=tg_id)
     else:
         bot.send_message(tg_id, TEXT.unsuccessful)
         start(message)
@@ -441,21 +442,44 @@ def register(call):
 def new_user(call):
     call_data = getCallbackData(call)
     tg_id = call.from_user.id
+    message_chat_id = call.message.chat.id
     log.info('%s in "new_user" with "%s"', tg_id, call_data)
     bot.send_chat_action(tg_id, 'typing')
-    new_markup = None
-    if call_data.split(':')[0] == TEXT.register_promote.split(':')[0]:
-        print("подтверждение")
-    elif call_data.split(':')[0] == TEXT.register_ban.split(':')[0]:
-        print("неподтверждение")
-        ban_user(tg_id=0, by_tg_id=tg_id)
+    call_data_command = call_data.split(':')[0]
+    user_tg_id = int(call_data.split(':')[1])
+    old_markup = call.message.reply_markup
+    new_markup = tg.types.InlineKeyboardMarkup()
+    if len(old_markup.keyboard) > 1:
+        new_markup.add(*old_markup.keyboard[0])
+    buttons = []
+    if call_data_command == TEXT.newuser_confirm:
+        bot.send_message(message_chat_id, 'Вы знакомы и можете подтвердить, что это действительно новый сосед?')
+        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel, '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
+        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_confirm_shure, '{}:{}'.format(TEXT.newuser_confirm_shure, user_tg_id))
+        new_markup.add(*buttons)
+    elif call_data_command == TEXT.newuser_ban:
+        bot.send_message(message_chat_id, 'Вы уверены, что этот человек на самом деле не имеет отношения к указанной квартире и его необходимо заблокировать?')
+        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel, '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
+        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_ban_shure, '{}:{}'.format(TEXT.newuser_ban_shure, user_tg_id))
+        new_markup.add(*buttons)
+    elif call_data_command == TEXT.newuser_cancel:
+        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_confirm, '{}:{}'.format(TEXT.newuser_confirm, user_tg_id))
+        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_ban, '{}:{}'.format(TEXT.newuser_ban, user_tg_id))
+        new_markup.add(*buttons)
+    elif call_data_command == TEXT.newuser_confirm_shure:
+        print("подтверждение уверен")
+        promote_user(tg_id=user_tg_id, by_tg_id=tg_id)
+        start(call)
+    elif call_data_command == TEXT.newuser_ban_shure:
+        print("неподтверждение уверен")
+        ban_user(tg_id=user_tg_id, by_tg_id=tg_id)
+        start(call)
     else:
         print("WTF new_user WTF")
+        new_markup = old_markup
         bot.send_message(tg_id, TEXT.error.format('new_user'))
 
-    bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=new_markup)
-    if not new_markup:
-        start(call)
+    bot.edit_message_reply_markup(message_chat_id, call.message.id, reply_markup=new_markup)
 
 
 @bot.callback_query_handler(func=lambda call: getCallbackAction(call) == NEIGHBORS_ACTION)
@@ -549,7 +573,7 @@ def send_post(message):
         last_name = message.from_user.last_name
     message_text = '''
 ———
-<a href="tg://user?id={}">{} {}</a>'''.format(tg_id, message.from_user.first_name, last_name)
+{} {}'''.format(tg_id, message.from_user.first_name, last_name)
     result = '✅ Сообщение отправлено в @Halvon_SPb'
     if message.content_type == 'text':
         if len(message.text) < 3:
@@ -560,8 +584,7 @@ def send_post(message):
     else:
         print(message.content_type)
         if message.content_type in ['poll', 'sticker']:
-            message_text = 'От <a href="tg://user?id={}">{} {}</a>:'.format(tg_id,
-                                                                            message.from_user.first_name, last_name)
+            message_text = 'От {} {}:'.format(tg_id, message.from_user.first_name, last_name)
             bot.send_message(config['BOT']['channelid'], message_text, parse_mode='HTML', disable_notification=True)
             message_text = None
         if message.caption:
@@ -750,7 +773,8 @@ def start(message):
             ''' подтверждённый пользователь
             '''
             print(2)
-            addButton(markup, ADVERT_ACTION, TEXT.make_post)  # TODO реализовать отправку
+            addButton(markup, ADVERT_ACTION, TEXT.make_post)
+            set_chat_admin(tg_id)
             pass
         if str(registered_user.id) == str(config['BOT']['adminid']):
             print('admin')
