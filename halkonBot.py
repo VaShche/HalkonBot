@@ -787,7 +787,7 @@ def start(message):
             ''' подтверждённый пользователь
             '''
             print(2)
-            addButton(markup, ADVERT_ACTION, TEXT.make_post)  # TODO Убрать у всех зареганных
+            #addButton(markup, ADVERT_ACTION, TEXT.make_post)  # TODO Убрать у всех зареганных
             set_chat_admin(tg_id)
             pass
         if str(registered_user.id) == str(config['BOT']['adminid']):
