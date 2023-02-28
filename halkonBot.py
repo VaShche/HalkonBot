@@ -23,20 +23,25 @@ if not house_dict:
 log.info('Started. Users: %s', len(flats.getAllHouseResidents(house_dict)))
 
 
-def get_admins_ids():
+def get_admins_ids(chat_id_for_search):
     ids = []
-    admins = bot.get_chat_administrators(chat_id)
+    admins = bot.get_chat_administrators(chat_id_for_search)
     for a in admins:
         ids.append(a.user.id)
     return ids
 
 
-def set_chat_admin(tg_id):
-    pass
-    '''
-    promoteChatMember
-    setChatAdministratorCustomTitle
-    '''
+def set_admin_in_chat(resident_for_promote, chat_id_for_promote):
+    try:
+        bot.promote_chat_member(chat_id_for_promote, resident_for_promote.id,
+                                can_change_info=True, can_post_messages=True, can_edit_messages=False,
+                                can_delete_messages=False, can_invite_users=True, can_restrict_members=False,
+                                can_pin_messages=True, can_manage_chat=False, can_promote_members=False,
+                                can_manage_video_chats=True, can_manage_voice_chats=True, can_manage_topics=False)
+        bot.set_chat_administrator_custom_title(chat_id, resident_for_promote.id,
+                                                resident_for_promote.statuses.get(resident_for_promote.status_id))
+    except Exception:
+        log.error('error at bot.promote in promote_user')
 
 
 def addButton(markup, action, text, data=None):
@@ -143,8 +148,8 @@ def add_user(tg_id, tg_chat_id, flat_id, floor_for_check=None):
     markup = users_link_markup(tg_id, 'Квартира №{}'.format(flat_id))
     notify_neighbors = flat.closest_neighbors(house_dict)
     confirm_buttons = []
-    addButton(confirm_buttons, NEWUSER_ACTION, TEXT.newuser_confirm, '{}:{}'.format(TEXT.newuser_confirm, tg_id))  # TODO реализовать подтверждение
-    addButton(confirm_buttons, NEWUSER_ACTION, TEXT.newuser_ban, '{}:{}'.format(TEXT.newuser_ban, tg_id))  # TODO реализовать подтверждение
+    addButton(confirm_buttons, NEWUSER_ACTION, TEXT.newuser_confirm, '{}:{}'.format(TEXT.newuser_confirm, tg_id))
+    addButton(confirm_buttons, NEWUSER_ACTION, TEXT.newuser_ban, '{}:{}'.format(TEXT.newuser_ban, tg_id))
     markup.add(*confirm_buttons)
     send_user_info_wrapper(config['BOT']['servicechatid'],
                            TEXT.new_neighbor.format(user_name, tg_id, flats.Resident.getResidentsIDs(notify_neighbors)),
@@ -274,16 +279,30 @@ def ban_user(tg_id, by_tg_id):
     banned_name = get_user_name(tg_id)
     del_user(tg_id, by_tg_id, banned_name)
     add_to_other(BAN, tg_id, tg_id)
+    try:
+        bot.promote_chat_member(chat_id, tg_id, can_change_info=False, can_post_messages=False, can_edit_messages=False,
+                                can_delete_messages=False, can_invite_users=False, can_restrict_members=False,
+                                can_pin_messages=False, can_manage_chat=False, can_promote_members=False,
+                                can_manage_video_chats=False, can_manage_voice_chats=False, can_manage_topics=False)
+    except Exception:
+        pass
 
 
-def promote_user(new_resident, by_tg_id):
-    bot.send_message(by_tg_id, "Спасибо!")
-    bot.send_message(config['BOT']['adminid'],
+def promote_user(new_resident, by_tg_id, new_status=2):
+    bot.send_message(config['BOT']['servicechatid'],
                      'Пользователь {} подтвердил {} c ID {}'.format(get_user_name(by_tg_id),
                                                                     get_user_name(new_resident.id),
-                                                                    new_resident.id))
-    bot.send_message(new_resident.id, 'Получено подтверждение от {}. Добро пожаловать :)'.format(get_user_name(by_tg_id)))
-    # TODO установить верифицированного пользователя, попробовать set_chat_admin
+                                                                    new_resident.id)) #TODO уведомления в отдельный
+    if not new_resident:
+        log.error('user not exist in promote_user')
+        bot.send_message(config['BOT']['servicechatid'], 'error')
+        return 0
+    new_resident.status_id = new_status
+    new_resident.status_granted_by = by_tg_id
+    set_admin_in_chat(new_resident, chat_id)
+    bot.send_message(by_tg_id, "Спасибо!")
+    bot.send_message(new_resident.id,
+                     'Получено подтверждение от {}. Добро пожаловать :)'.format(get_user_name(by_tg_id)))
 
 
 def ban_another_user(message):
@@ -465,16 +484,18 @@ def new_user(call):
             message_text = 'Спасибо! Кто-то из соседей уже подтвердил этого человека'
             if registered_user.flat_id == BAN:
                 message_text = 'Спасибо! Кто-то из соседей уже заблокировал этого человека'
-            bot.send_message(tg_id, message_text)
+            bot.send_message(message_chat_id, message_text)
+        elif tg_id not in get_admins_ids(chat_id):
+            new_markup = old_markup
+            bot.send_message(message_chat_id,
+                             'Для подтверждения соседей у вас должно быть указано "собственник в ЖК" в закрытом чате.')
         elif call_data_command == TEXT.newuser_confirm:
-            # TODO должно срабатывать только у проверенных пользователей
             bot.send_message(message_chat_id, 'Вы знакомы и можете подтвердить, что это действительно новый сосед?')
             addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel, '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
             addButton(buttons, NEWUSER_ACTION, TEXT.newuser_confirm_shure,
                       '{}:{}'.format(TEXT.newuser_confirm_shure, user_tg_id))
             new_markup.add(*buttons)
         elif call_data_command == TEXT.newuser_ban:
-            # TODO должно срабатывать только у проверенных пользователей
             bot.send_message(message_chat_id,
                              'Вы уверены, что этот человек на самом деле не имеет отношения к указанной квартире и его необходимо заблокировать?')
             addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel, '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
@@ -753,18 +774,15 @@ def start(message):
             markup = None
             bot.send_message(tg_id, TEXT.welcome_ban, reply_markup=markup)
             return 0  # EXIT
-        # проверка на админство в чате (для присвоения статуса проверенного)  TODO
+
         if str(registered_user.id) == str(config['BOT']['adminid']):
             pass
             #registered_user.status_id = 2
 
-        '''
-        if registered_user.status_id < 2:
-            chat_admins = bot.get_chat_administrators(chat_id)
-            for admin in chat_admins:
-                if admin.user.id == registered_user.id:
-                    registered_user.status_id = 2
-        '''
+        # проверка на админство в чате (для присвоения статуса проверенного в случае установки человеком)
+        if registered_user.status_id == 0:
+            if registered_user.id in get_admins_ids(chat_id):
+                promote_user(registered_user, config['BOT']['adminid'])
 
         if registered_user.status_id >= 0:
             ''' зареган, но не подтверждён
@@ -795,14 +813,14 @@ def start(message):
                     '''
                     text_for_message = TEXT.welcome_flat.format(registered_user.flat_id)
                     addButton(markup, GENERAL_ACTION, TEXT.get_neighbors)
-                    addButton(markup, ADVERT_ACTION, TEXT.make_post)  # TODO Убрать у всех зареганных
                 pass
         if registered_user.status_id >= 1:
             ''' подтверждённый пользователь
             '''
             print(2)
-            #addButton(markup, ADVERT_ACTION, TEXT.make_post)  # TODO Убрать у всех зареганных
-            set_chat_admin(tg_id)
+            addButton(markup, ADVERT_ACTION, TEXT.make_post)
+            if registered_user.id not in get_admins_ids(chat_id):  # ToDO проверка на случай входа в чат после подтверждения человеком
+                set_admin_in_chat(registered_user, chat_id)
             pass
         if str(registered_user.id) == str(config['BOT']['adminid']):
             print('admin')

@@ -7,7 +7,7 @@ class Resident(object):
     id = None
     chat_id = None
     status_id = None
-    statuses = {0: "Не подтверждён", 1: "Живёт в ЖК", 2: "Собственник в ЖК"}
+    statuses = {0: "не подтверждён", 1: "живёт в ЖК", 2: "собственник в ЖК"}
     flat_id = None
     status_granted_by = None
     adding_user_id = None
