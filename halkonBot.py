@@ -582,7 +582,7 @@ def send_post(message):
         last_name = message.from_user.last_name
     message_text = '''
 ———
-{} {}'''.format(tg_id, message.from_user.first_name, last_name)
+{} {}'''.format(message.from_user.first_name, last_name)
     result = '✅ Сообщение отправлено в @Halvon_SPb'
     if message.content_type == 'text':
         if len(message.text) < 3:
@@ -601,6 +601,7 @@ def send_post(message):
         bot.copy_message(config['BOT']['channelid'], tg_id, message.id,
                          caption=message_text, parse_mode='HTML', allow_sending_without_reply=True)
     bot.send_message(tg_id, result)
+    bot.send_message(config['BOT']['servicechatid'], 'Опубликовал пост ID: {}'.format(tg_id))
     start(message)
 
 
@@ -740,12 +741,15 @@ def start(message):
             return 0  # EXIT
         # проверка на админство в чате (для присвоения статуса проверенного)  TODO
         if str(registered_user.id) == str(config['BOT']['adminid']):
-            registered_user.status_id = 2
+            pass
+            #registered_user.status_id = 2
+
         '''
-        chat_admins = bot.get_chat_administrators(chat_id)
-        for admin in chat_admins:
-            if admin.user.id == registered_user.id:
-                registered_user.status_id = 2
+        if registered_user.status_id < 2:
+            chat_admins = bot.get_chat_administrators(chat_id)
+            for admin in chat_admins:
+                if admin.user.id == registered_user.id:
+                    registered_user.status_id = 2
         '''
 
         if registered_user.status_id >= 0:
@@ -777,12 +781,13 @@ def start(message):
                     '''
                     text_for_message = TEXT.welcome_flat.format(registered_user.flat_id)
                     addButton(markup, GENERAL_ACTION, TEXT.get_neighbors)
+                    addButton(markup, ADVERT_ACTION, TEXT.make_post)  # TODO Убрать у всех зареганных
                 pass
         if registered_user.status_id >= 1:
             ''' подтверждённый пользователь
             '''
             print(2)
-            addButton(markup, ADVERT_ACTION, TEXT.make_post)
+            addButton(markup, ADVERT_ACTION, TEXT.make_post)  # TODO Убрать у всех зареганных
             set_chat_admin(tg_id)
             pass
         if str(registered_user.id) == str(config['BOT']['adminid']):
