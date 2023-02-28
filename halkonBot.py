@@ -1,5 +1,6 @@
 import telebot as tg
 import logging as log
+import threading
 import func
 import flats
 import text as TEXT
@@ -807,8 +808,13 @@ def start(message):
     bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
 
-if True:
-    try:
-        bot.polling(none_stop=True)
-    finally:
-        log.error('zzz')
+def bot_check():
+    return bot.get_me()
+
+
+def bot_runner():
+    bot.infinity_polling(none_stop=True)
+
+
+t = threading.Thread(target=bot_runner)
+t.start()
