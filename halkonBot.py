@@ -34,7 +34,7 @@ def get_admins_ids(chat_id_for_search):
 def set_admin_in_chat(resident_for_promote, chat_id_for_promote):
     try:
         bot.promote_chat_member(chat_id_for_promote, resident_for_promote.id,
-                                can_change_info=True, can_post_messages=True, can_edit_messages=False,
+                                can_change_info=False, can_post_messages=True, can_edit_messages=False,
                                 can_delete_messages=False, can_invite_users=True, can_restrict_members=False,
                                 can_pin_messages=True, can_manage_chat=False, can_promote_members=False,
                                 can_manage_video_chats=True, can_manage_voice_chats=True, can_manage_topics=False)
@@ -288,7 +288,8 @@ def ban_user(tg_id, by_tg_id):
         pass
 
 
-def promote_user(new_resident, by_tg_id, new_status=2):
+def promote_user(tg_id, by_tg_id, new_status=2):
+    new_resident = flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id)
     bot.send_message(config['BOT']['servicechatid'],
                      'Пользователь {} подтвердил {} c ID {}'.format(get_user_name(by_tg_id),
                                                                     get_user_name(new_resident.id),
@@ -508,7 +509,7 @@ def new_user(call):
             new_markup.add(*buttons)
         elif call_data_command == TEXT.newuser_confirm_shure:
             print("подтверждение уверен")
-            promote_user(new_resident=registered_user, by_tg_id=tg_id)
+            promote_user(tg_id=user_tg_id, by_tg_id=tg_id)
             start(call)
         elif call_data_command == TEXT.newuser_ban_shure:
             print("неподтверждение уверен")
@@ -782,7 +783,7 @@ def start(message):
         # проверка на админство в чате (для присвоения статуса проверенного в случае установки человеком)
         if registered_user.status_id == 0:
             if registered_user.id in get_admins_ids(chat_id):
-                promote_user(registered_user, config['BOT']['adminid'])
+                promote_user(registered_user.id, config['BOT']['adminid'])
 
         if registered_user.status_id >= 0:
             ''' зареган, но не подтверждён
