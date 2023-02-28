@@ -276,13 +276,13 @@ def ban_user(tg_id, by_tg_id):
     add_to_other(BAN, tg_id, tg_id)
 
 
-def promote_user(tg_id, by_tg_id):
+def promote_user(new_resident, by_tg_id):
     bot.send_message(by_tg_id, "Спасибо!")
     bot.send_message(config['BOT']['adminid'],
                      'Пользователь {} подтвердил {} c ID {}'.format(get_user_name(by_tg_id),
-                                                                    get_user_name(tg_id),
-                                                                    tg_id))
-    bot.send_message(tg_id, 'Получено подтверждение от {}. Добро пожаловать :)'.format(get_user_name(by_tg_id)))
+                                                                    get_user_name(new_resident.id),
+                                                                    new_resident.id))
+    bot.send_message(new_resident.id, 'Получено подтверждение от {}. Добро пожаловать :)'.format(get_user_name(by_tg_id)))
     # TODO установить верифицированного пользователя, попробовать set_chat_admin
 
 
@@ -458,35 +458,49 @@ def new_user(call):
     if len(old_markup.keyboard) > 1:
         new_markup.add(*old_markup.keyboard[0])
     buttons = []
-    # TODO если решение уже принято, то не делать второе решение
-    if call_data_command == TEXT.newuser_confirm:
-        # TODO должно срабатывать только у проверенных пользователей
-        bot.send_message(message_chat_id, 'Вы знакомы и можете подтвердить, что это действительно новый сосед?')
-        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel, '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
-        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_confirm_shure, '{}:{}'.format(TEXT.newuser_confirm_shure, user_tg_id))
-        new_markup.add(*buttons)
-    elif call_data_command == TEXT.newuser_ban:
-        # TODO должно срабатывать только у проверенных пользователей
-        bot.send_message(message_chat_id, 'Вы уверены, что этот человек на самом деле не имеет отношения к указанной квартире и его необходимо заблокировать?')
-        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel, '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
-        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_ban_shure, '{}:{}'.format(TEXT.newuser_ban_shure, user_tg_id))
-        new_markup.add(*buttons)
-    elif call_data_command == TEXT.newuser_cancel:
-        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_confirm, '{}:{}'.format(TEXT.newuser_confirm, user_tg_id))
-        addButton(buttons, NEWUSER_ACTION, TEXT.newuser_ban, '{}:{}'.format(TEXT.newuser_ban, user_tg_id))
-        new_markup.add(*buttons)
-    elif call_data_command == TEXT.newuser_confirm_shure:
-        print("подтверждение уверен")
-        promote_user(tg_id=user_tg_id, by_tg_id=tg_id)
-        start(call)
-    elif call_data_command == TEXT.newuser_ban_shure:
-        print("неподтверждение уверен")
-        ban_user(tg_id=user_tg_id, by_tg_id=tg_id)
-        start(call)
+    registered_user = flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), user_tg_id)
+    if registered_user:
+        if registered_user.flat_id == BAN or registered_user.status_id > 0:
+            new_markup = None
+            message_text = 'Спасибо! Кто-то из соседей уже подтвердил этого человека'
+            if registered_user.flat_id == BAN:
+                message_text = 'Спасибо! Кто-то из соседей уже заблокировал этого человека'
+            bot.send_message(tg_id, message_text)
+        elif call_data_command == TEXT.newuser_confirm:
+            # TODO должно срабатывать только у проверенных пользователей
+            bot.send_message(message_chat_id, 'Вы знакомы и можете подтвердить, что это действительно новый сосед?')
+            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel, '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
+            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_confirm_shure,
+                      '{}:{}'.format(TEXT.newuser_confirm_shure, user_tg_id))
+            new_markup.add(*buttons)
+        elif call_data_command == TEXT.newuser_ban:
+            # TODO должно срабатывать только у проверенных пользователей
+            bot.send_message(message_chat_id,
+                             'Вы уверены, что этот человек на самом деле не имеет отношения к указанной квартире и его необходимо заблокировать?')
+            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel, '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
+            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_ban_shure,
+                      '{}:{}'.format(TEXT.newuser_ban_shure, user_tg_id))
+            new_markup.add(*buttons)
+        elif call_data_command == TEXT.newuser_cancel:
+            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_confirm, '{}:{}'.format(TEXT.newuser_confirm, user_tg_id))
+            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_ban, '{}:{}'.format(TEXT.newuser_ban, user_tg_id))
+            new_markup.add(*buttons)
+        elif call_data_command == TEXT.newuser_confirm_shure:
+            print("подтверждение уверен")
+            promote_user(new_resident=registered_user, by_tg_id=tg_id)
+            start(call)
+        elif call_data_command == TEXT.newuser_ban_shure:
+            print("неподтверждение уверен")
+            ban_user(tg_id=user_tg_id, by_tg_id=tg_id)
+            start(call)
+        else:
+            print("WTF new_user WTF")
+            new_markup = old_markup
+            bot.send_message(tg_id, TEXT.error.format('new_user'))
     else:
-        print("WTF new_user WTF")
-        new_markup = old_markup
-        bot.send_message(tg_id, TEXT.error.format('new_user'))
+        # пользователя видимо удалили
+        new_markup = None
+        bot.send_message(tg_id, TEXT.error.format('new_user not exist'))
 
     bot.edit_message_reply_markup(message_chat_id, call.message.id, reply_markup=new_markup)
 
