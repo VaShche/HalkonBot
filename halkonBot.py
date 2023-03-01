@@ -689,6 +689,7 @@ def general(call):
         addButton(markup, REGISTER_ACTION, TEXT.register_approve)
         addButton(markup, REGISTER_ACTION, TEXT.register_cancel)
         addButton(markup, REGISTER_ACTION, TEXT.register_ban)
+        addButton(markup, NEIGHBORS_ACTION, TEXT.get_all_neighbors)
         addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, 'Доступные действия ⤵️', reply_markup=markup)
     elif call_data == TEXT.get_neighbors:
@@ -775,10 +776,6 @@ def start(message):
             markup = None
             bot.send_message(tg_id, TEXT.welcome_ban, reply_markup=markup)
             return 0  # EXIT
-
-        if str(registered_user.id) == str(config['BOT']['adminid']):
-            pass
-            #registered_user.status_id = 2
 
         # проверка на админство в чате (для присвоения статуса проверенного в случае установки человеком)
         if registered_user.status_id == 0:
