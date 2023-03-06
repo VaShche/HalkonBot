@@ -592,22 +592,30 @@ def neighbors(call):
     send_user_info_wrapper(tg_id, message_text, markup)
 
 
-def send_advert(message):
+def forward_from_user_to_chat(message, to_chat_id, text_to_chat, text_to_user):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    bot.send_message(config['BOT']['servicechatid'], 'Объявление на модерацию для канала:')
-    bot.forward_message(config['BOT']['servicechatid'], message.chat.id, message.message_id)
-    bot.send_message(tg_id, '✅ Сообщение отправлено на модерацию. После неё оно будет опубликовано в @Halkon_SPb')
+    result = text_to_user
+    if message.content_type == 'text':
+        if len(message.text) < 3:
+            result = '❌ Сообщение не может быть короче трёх символов.'
+    if result == text_to_user:
+        bot.send_message(to_chat_id, text_to_chat)
+        bot.forward_message(to_chat_id, message.chat.id, message.message_id)
+    bot.send_message(tg_id, result)
     start(message)
+
+
+def send_advert(message):
+    forward_from_user_to_chat(message, config['BOT']['servicechatid'],
+                              'Объявление на модерацию для канала:',
+                              '✅ Сообщение отправлено на модерацию. После неё оно будет опубликовано в @Halkon_SPb')
 
 
 def send_idea(message):
-    tg_id = message.from_user.id
-    bot.send_chat_action(tg_id, 'typing')
-    bot.send_message(config['BOT']['adminid'], 'Идея для бота:')
-    bot.forward_message(config['BOT']['adminid'], message.chat.id, message.message_id)
-    bot.send_message(tg_id, '✅ Сообщение отправлено разработчику. Спасибо!')
-    start(message)
+    forward_from_user_to_chat(message, config['BOT']['adminid'],
+                              'Идея для бота:',
+                              '✅ Сообщение отправлено разработчику. Спасибо!')
 
 
 def send_post(message):
@@ -650,17 +658,17 @@ def advert(call):
     if call_data == TEXT.make_advert:
         '''объявление на модерацию
         '''
-        bot.send_message(tg_id, 'Отправьте пожалуйста объявление одним сообщением. После модерации оно будет перенаправлено в @Halkon_SPb:')
+        bot.send_message(tg_id, 'Отправьте пожалуйста объявление одним сообщением. После модерации оно будет перенаправлено в @Halkon_SPb.\nДля отмены отправьте любую букву.')
         bot.register_next_step_handler(call.message, send_advert)
     elif call_data == TEXT.todo_for_bot:
         '''обратная связь
         '''
-        bot.send_message(tg_id, 'Напишите пожалуйста ваши идеи/предложения для отправки разработчику:')
+        bot.send_message(tg_id, 'Напишите пожалуйста ваши идеи/предложения для отправки разработчику.\nДля отмены отправьте любую букву.')
         bot.register_next_step_handler(call.message, send_idea)
     elif call_data == TEXT.make_post:
         '''сообщение от проверенного в канал
         '''
-        bot.send_message(tg_id, 'Напишите пожалуйста ваше сообщение. Оно будет опубликовано от имени канала в @Halkon_SPb. Ваше имя будет добавлено в подпись к сообщению. Для отмены отправьте любую букву.')
+        bot.send_message(tg_id, 'Напишите пожалуйста ваше сообщение. Оно будет опубликовано от имени канала в @Halkon_SPb. Ваше имя будет добавлено в подпись к сообщению.\nДля отмены отправьте любую букву.')
         bot.register_next_step_handler(call.message, send_post)
     else:
         print("WTF advert WTF")
