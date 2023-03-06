@@ -1,6 +1,7 @@
 import telebot as tg
 import logging as log
 import threading
+import datetime
 import func
 import flats
 import text as TEXT
@@ -8,17 +9,19 @@ from constants import *
 import settings
 
 config = settings.config
-log.basicConfig(filename='halkon.log', format='%(asctime)s %(levelname)s %(message)s',
-                encoding='utf-8', level=log.INFO)
 bot = tg.TeleBot(config['BOT']['token'])
 chat_id = config['BOT']['chatid']
 data_file_path = config['BOT']['data']
 chat_link = config['BOT']['invitelink']
 
+today = datetime.date.today()
 house_dict = func.load_dict_from_file(data_file_path, key=config['BOT']['cryptokey'])
 if not house_dict:
     house_dict = flats.getHalkonFlatsStruct()
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
+else:  # BACKUP
+    func.save_dict_to_file('{}_{}_{}'.format(today.year, today.month, data_file_path),
+                           house_dict, key=config['BOT']['cryptokey'])
 
 log.info('Started. Users: %s', len(flats.getAllHouseResidents(house_dict)))
 
@@ -177,7 +180,7 @@ def del_user(tg_id, del_by_tg_id, user_name):
     markup = users_link_markup(tg_id, user_name)
     send_user_info_wrapper(del_by_tg_id, 'Удалён', markup)
     send_user_info_wrapper(config['BOT']['servicechatid'], 'Удалён пользователем {}'.format(del_by_tg_id), markup)
-    # TODO уведомить соседей
+    # TODO уведомить соседей при удалении?
     '''
     notify_neighbors = flat.closest_neighbors(flats.getAllHouseFlats(house_dict))
     for n in notify_neighbors:
@@ -293,7 +296,7 @@ def promote_user(tg_id, by_tg_id, new_status=2):
     bot.send_message(config['BOT']['servicechatid'],
                      'Пользователь {} подтвердил {} c ID {}'.format(get_user_name(by_tg_id),
                                                                     get_user_name(new_resident.id),
-                                                                    new_resident.id)) #TODO уведомления в отдельный
+                                                                    new_resident.id))
     if not new_resident:
         log.error('user not exist in promote_user')
         bot.send_message(config['BOT']['servicechatid'], 'error')
@@ -610,6 +613,7 @@ def send_advert(message):
     forward_from_user_to_chat(message, config['BOT']['servicechatid'],
                               'Объявление на модерацию для канала:',
                               '✅ Сообщение отправлено на модерацию. После неё оно будет опубликовано в @Halkon_SPb')
+    # TODO оплата для тех кто не собственник в ЖК
 
 
 def send_idea(message):

@@ -3,9 +3,11 @@ import pip
 #pip.main(['install', 'cryptography'])
 #from background import keep_alive  # импорт функции для поддержки работоспособности
 #keep_alive()  # запускаем flask-сервер в отдельном потоке.
-
+import datetime
+today = datetime.date.today()
 import logging as log
-log.basicConfig(filename='halkon.log', format='%(asctime)s %(levelname)s %(message)s',
+log.basicConfig(filename='{}_{}_halkon.log'.format(today.year, today.month),
+                format='%(asctime)s %(levelname)s %(message)s',
                 encoding='utf-8', level=log.INFO)
 
 #import dataMerge
