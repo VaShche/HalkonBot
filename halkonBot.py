@@ -6,13 +6,17 @@ import func
 import flats
 import text as TEXT
 from constants import *
+import tg_func as tgf
 import settings
+
 
 config = settings.config
 bot = tg.TeleBot(config['BOT']['token'])
 chat_id = config['BOT']['chatid']
+channel_tg_id = config['BOT']['channelid']
 data_file_path = config['BOT']['data']
 chat_link = config['BOT']['invitelink']
+
 
 today = datetime.date.today()
 house_dict = func.load_dict_from_file(data_file_path, key=config['BOT']['cryptokey'])
@@ -22,111 +26,7 @@ if not house_dict:
 else:  # BACKUP
     func.save_dict_to_file('{}_{}_{}'.format(today.year, today.month, data_file_path),
                            house_dict, key=config['BOT']['cryptokey'])
-
 log.info('Started. Users: %s', len(flats.getAllHouseResidents(house_dict)))
-
-
-def get_admins_ids(chat_id_for_search):
-    ids = []
-    admins = bot.get_chat_administrators(chat_id_for_search)
-    for a in admins:
-        ids.append(a.user.id)
-    return ids
-
-
-def set_admin_in_chat(resident_for_promote, chat_id_for_promote):
-    try:
-        bot.promote_chat_member(chat_id_for_promote, resident_for_promote.id,
-                                can_change_info=False, can_post_messages=True, can_edit_messages=False,
-                                can_delete_messages=False, can_invite_users=True, can_restrict_members=False,
-                                can_pin_messages=True, can_manage_chat=False, can_promote_members=False,
-                                can_manage_video_chats=True, can_manage_voice_chats=True, can_manage_topics=False)
-        bot.set_chat_administrator_custom_title(chat_id, resident_for_promote.id,
-                                                resident_for_promote.statuses.get(resident_for_promote.status_id))
-    except Exception:
-        log.error('error at bot.promote in promote_user')
-
-
-def addButton(markup, action, text, data=None):
-    if not data:
-        data = text
-    button = tg.types.InlineKeyboardButton(text=text, callback_data=actionCallbackData(action, data))
-    if type(markup) is list:
-        markup.append(button)
-    else:
-        markup.add(button)
-
-
-def actionCallbackData(action, data):
-    return '{}{}{}'.format(action, SPLITTER, data)
-
-
-def getCallbackAction(call):
-    try:
-        return int(call.data.split(SPLITTER)[0])
-    except Exception:
-        return -1
-
-
-def getCallbackData(call):
-    return call.data.split(SPLITTER)[1]
-
-
-def users_link_markup(tg_id, name):
-    markup = tg.types.InlineKeyboardMarkup(row_width=2)
-    button = tg.types.InlineKeyboardButton(str(name), url='tg://user?id={}'.format(tg_id))
-    markup.add(button)
-    return markup
-
-
-def get_user_name(tg_id):
-    user = None
-    try:
-        chat = bot.get_chat(tg_id)
-        if chat.type == 'private':
-            user = chat
-    except Exception:
-        print("no direct chat")
-    if not user:
-        try:
-            chat_member = bot.get_chat_member(config['BOT']['channelid'], tg_id)
-            user = chat_member.user
-        except Exception:
-            pass
-    if user:
-        user_name = user.first_name
-        if user.last_name:
-            user_name = '{} {}'.format(user_name, user.last_name)
-    else:
-        user_name = 'ID: {}'.format(tg_id)
-    return user_name
-
-
-def send_user_info_wrapper(to_chat_id, message_text, markup, parse_mode=None, disable_notification=False):
-    try:
-        bot.send_message(to_chat_id, message_text, parse_mode=parse_mode,
-                         reply_markup=markup, disable_notification=disable_notification)
-    except Exception:
-        if markup:
-            new_markup = tg.types.InlineKeyboardMarkup()
-            for row in markup.keyboard:
-                row_buttons = []
-                for button in row:
-                    if button.url:
-                        message_text += '\n<a href="{}">{}</a> <span class="tg-spoiler">ID {}</span>'.\
-                            format(button.url, button.text, button.url.replace('tg://user?id=', ''))
-                    else:
-                        row_buttons.append(button)
-                new_markup.add(*row_buttons)
-        else:
-            new_markup = None
-        try:
-            bot.send_message(to_chat_id, message_text, parse_mode='HTML',
-                             reply_markup=new_markup, disable_notification=disable_notification)
-        except Exception:
-            bot.send_message(config['BOT']['servicechatid'],
-                             'EROOR with sending to tg://user?id={}'.format(to_chat_id))
-        log.warning('send_user_info_wrapper for : %s', to_chat_id)
 
 
 def add_user(tg_id, tg_chat_id, flat_id, floor_for_check=None):
@@ -147,21 +47,23 @@ def add_user(tg_id, tg_chat_id, flat_id, floor_for_check=None):
     flat.addResident(tg_id, tg_chat_id)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
 
-    user_name = get_user_name(tg_id)
-    markup = users_link_markup(tg_id, 'Квартира №{}'.format(flat_id))
+    user_name = tgf.get_user_name(bot, channel_tg_id, tg_id)
+    markup = tgf.users_link_markup(tg_id, 'Квартира №{}'.format(flat_id))
     notify_neighbors = flat.closest_neighbors(house_dict)
     confirm_buttons = []
-    addButton(confirm_buttons, NEWUSER_ACTION, TEXT.newuser_confirm, '{}:{}'.format(TEXT.newuser_confirm, tg_id))
-    addButton(confirm_buttons, NEWUSER_ACTION, TEXT.newuser_ban, '{}:{}'.format(TEXT.newuser_ban, tg_id))
+    tgf.addButton(confirm_buttons, NEWUSER_ACTION, TEXT.newuser_confirm, '{}:{}'.format(TEXT.newuser_confirm, tg_id))
+    tgf.addButton(confirm_buttons, NEWUSER_ACTION, TEXT.newuser_ban, '{}:{}'.format(TEXT.newuser_ban, tg_id))
     markup.add(*confirm_buttons)
-    send_user_info_wrapper(config['BOT']['servicechatid'],
-                           TEXT.new_neighbor.format(user_name, tg_id, flats.Resident.getResidentsIDs(notify_neighbors)),
-                           markup, parse_mode='HTML')
+    tgf.send_user_info_wrapper(bot, config['BOT']['servicechatid'],
+                               TEXT.new_neighbor.format(user_name, tg_id,
+                                                        flats.Resident.getResidentsIDs(notify_neighbors)),
+                               markup, parse_mode='HTML')
     for n in notify_neighbors:
         if n.chat_id != tg_chat_id:
-            send_user_info_wrapper(n.chat_id,
-                                   TEXT.new_neighbor.format(user_name, tg_id, ''),
-                                   markup, parse_mode='HTML', disable_notification=True)
+            tgf.send_user_info_wrapper(bot, n.chat_id,
+                                       TEXT.new_neighbor.format(user_name, tg_id, ''),
+                                       markup, parse_mode='HTML', disable_notification=True,
+                                       service_chat_id=config['BOT']['servicechatid'])
     print('Жильцов: {}'.format(len(flats.getAllHouseResidents(house_dict))))
     pass
 
@@ -177,9 +79,9 @@ def del_user(tg_id, del_by_tg_id, user_name):
     flat.removeResident(tg_id)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
 
-    markup = users_link_markup(tg_id, user_name)
-    send_user_info_wrapper(del_by_tg_id, 'Удалён', markup)
-    send_user_info_wrapper(config['BOT']['servicechatid'], 'Удалён пользователем {}'.format(del_by_tg_id), markup)
+    markup = tgf.users_link_markup(tg_id, user_name)
+    tgf.send_user_info_wrapper(bot, del_by_tg_id, 'Удалён', markup, service_chat_id=config['BOT']['servicechatid'])
+    tgf.send_user_info_wrapper(bot, config['BOT']['servicechatid'], 'Удалён пользователем {}'.format(del_by_tg_id), markup)
     # TODO уведомить соседей при удалении?
     '''
     notify_neighbors = flat.closest_neighbors(flats.getAllHouseFlats(house_dict))
@@ -190,43 +92,25 @@ def del_user(tg_id, del_by_tg_id, user_name):
     return tg_id
 
 
-def get_id_from_text(message_text):
-    try:
-        res_id = int(message_text.strip())
-    except Exception:
-        res_id = None
-    return res_id
-
-
 def register_with_number(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    flat_number = get_id_from_text(message.text)
+    flat_number = tgf.get_id_from_text(message.text)
     flat = flats.Flat.findByFlatID(flats.getAllHouseFlats(house_dict), flat_number)
     if flat and flat_number:
         print("12")
         buttons = []
         floors = flat.get_floors_for_check()
         for floor in floors:
-            addButton(buttons, REGISTER_ACTION, TEXT.register_by_number_floor_check.format(flat.id, floor))
+            tgf.addButton(buttons, REGISTER_ACTION, TEXT.register_by_number_floor_check.format(flat.id, floor))
         markup = tg.types.InlineKeyboardMarkup(row_width=2)
         markup.add(*buttons)
-        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, TEXT.welcome_register_flat_choose_floor.format(flat.id), reply_markup=markup)
     else:
         print("13")
         bot.send_message(tg_id, TEXT.register_by_number_reinput)
         bot.register_next_step_handler(message, register_with_number)
-
-
-def get_another_id(message):
-    if message.forward_from:
-        another_tg_id = message.forward_from.id
-        another_user_name = message.forward_from.first_name
-    else:
-        another_tg_id = get_id_from_text(message.text)
-        another_user_name = message.text
-    return another_tg_id, another_user_name
 
 
 def register_another_user(message):
@@ -236,7 +120,7 @@ def register_another_user(message):
     if not from_user_person.adding_user_id:
         '''Получение ID пользователя
         '''
-        another_tg_id, another_user_name = get_another_id(message)
+        another_tg_id, another_user_name = tgf.get_another_id(message)
         if another_tg_id:
             from_user_person.adding_user_id = another_tg_id
             print(another_tg_id)
@@ -248,7 +132,7 @@ def register_another_user(message):
     elif not from_user_person.adding_user_flat_id:
         '''Получение помещения
         '''
-        flat_number = get_id_from_text(message.text)
+        flat_number = tgf.get_id_from_text(message.text)
         if not flat_number and str(tg_id) == str(config['BOT']['adminid']):
             flat_number = message.text
             flat = flats.Flat(flat_number, COMMERCE, 1)
@@ -269,7 +153,7 @@ def register_another_user(message):
 def remove_another_user(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    another_tg_id, another_user_name = get_another_id(message)
+    another_tg_id, another_user_name = tgf.get_another_id(message)
     if another_tg_id:
         del_user(another_tg_id, tg_id, another_user_name)
         start(message)
@@ -279,7 +163,7 @@ def remove_another_user(message):
 
 
 def ban_user(tg_id, by_tg_id):
-    banned_name = get_user_name(tg_id)
+    banned_name = tgf.get_user_name(bot, channel_tg_id, tg_id)
     del_user(tg_id, by_tg_id, banned_name)
     add_to_other(BAN, tg_id, tg_id)
     try:
@@ -294,8 +178,8 @@ def ban_user(tg_id, by_tg_id):
 def promote_user(tg_id, by_tg_id, new_status=2):
     new_resident = flats.Resident.findByTgID(flats.getAllHouseResidents(house_dict), tg_id)
     bot.send_message(config['BOT']['servicechatid'],
-                     'Пользователь {} подтвердил {} c ID {}'.format(get_user_name(by_tg_id),
-                                                                    get_user_name(new_resident.id),
+                     'Пользователь {} подтвердил {} c ID {}'.format(tgf.get_user_name(bot, channel_tg_id, by_tg_id),
+                                                                    tgf.get_user_name(bot, channel_tg_id, new_resident.id),
                                                                     new_resident.id))
     if not new_resident:
         log.error('user not exist in promote_user')
@@ -303,16 +187,17 @@ def promote_user(tg_id, by_tg_id, new_status=2):
         return 0
     new_resident.status_id = new_status
     new_resident.status_granted_by = by_tg_id
-    set_admin_in_chat(new_resident, chat_id)
+    tgf.set_admin_in_chat(bot, new_resident, chat_id)
     bot.send_message(by_tg_id, "Спасибо!")
     bot.send_message(new_resident.id,
-                     'Получено подтверждение от {}. Добро пожаловать :)'.format(get_user_name(by_tg_id)))
+                     'Получено подтверждение от {}. Добро пожаловать :)'.format(tgf.get_user_name(bot, channel_tg_id,
+                                                                                                  by_tg_id)))
 
 
 def ban_another_user(message):
     tg_id = message.from_user.id
     bot.send_chat_action(tg_id, 'typing')
-    another_tg_id, another_user_name = get_another_id(message)
+    another_tg_id, another_user_name = tgf.get_another_id(message)
     if another_tg_id:
         ban_user(tg_id=another_tg_id, by_tg_id=tg_id)
     else:
@@ -331,14 +216,16 @@ def register_with_commerce(message):
         house_dict.get(COMMERCE).append(flat)
     flat.addResident(tg_id, tg_chat_id)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
-    markup = users_link_markup(tg_id, company_name)
-    send_user_info_wrapper(chat_id, TEXT.new_commerce.format(tg_id), markup,
-                           parse_mode='HTML', disable_notification=True)
+    markup = tgf.users_link_markup(tg_id, company_name)
+    tgf.send_user_info_wrapper(bot, chat_id, TEXT.new_commerce.format(tg_id), markup,
+                               parse_mode='HTML', disable_notification=True,
+                               service_chat_id=config['BOT']['servicechatid'])
     notify_neighbors = flat.closest_neighbors(house_dict)
     for n in notify_neighbors:
         if n.chat_id != tg_chat_id:
-            send_user_info_wrapper(n.chat_id, TEXT.new_commerce.format(tg_id), markup,
-                                   parse_mode='HTML', disable_notification=True)
+            tgf.send_user_info_wrapper(bot, n.chat_id, TEXT.new_commerce.format(tg_id), markup,
+                                       parse_mode='HTML', disable_notification=True,
+                                       service_chat_id=config['BOT']['servicechatid'])
     start(message)
 
 
@@ -351,14 +238,14 @@ def add_to_other(other_type, tg_id, tg_chat_id, user_name=''):
         house_dict.get(OTHER).append(flat)
     flat.addResident(tg_id, tg_chat_id)
     func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
-    markup = users_link_markup(tg_id, '{} {}'.format(other_type, user_name))
-    send_user_info_wrapper(config['BOT']['servicechatid'], str(tg_id), markup,
-                           parse_mode='HTML', disable_notification=True)
+    markup = tgf.users_link_markup(tg_id, '{} {}'.format(other_type, user_name))
+    tgf.send_user_info_wrapper(bot, config['BOT']['servicechatid'], str(tg_id), markup,
+                               parse_mode='HTML', disable_notification=True)
 
 
-@bot.callback_query_handler(func=lambda call: getCallbackAction(call) == REGISTER_ACTION)
+@bot.callback_query_handler(func=lambda call: tgf.getCallbackAction(call) == REGISTER_ACTION)
 def register(call):
-    call_data = getCallbackData(call)
+    call_data = tgf.getCallbackData(call)
     tg_id = call.from_user.id
     log.info('%s in "register" with "%s"', tg_id, call_data)
     tg_chat_id = call.message.chat.id
@@ -372,12 +259,12 @@ def register(call):
     elif call_data == TEXT.register_start:
         print("001")
         markup = tg.types.InlineKeyboardMarkup()
-        addButton(markup, REGISTER_ACTION, TEXT.register_by_number)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_by_number)
         #addButton(markup, REGISTER_ACTION, TEXT.register_by_entr_and_floor)  # TODO
-        addButton(markup, REGISTER_ACTION, TEXT.register_commerce)
-        addButton(markup, REGISTER_ACTION, TEXT.register_living_close)
-        addButton(markup, REGISTER_ACTION, TEXT.register_interested)
-        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_commerce)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_living_close)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_interested)
+        tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, TEXT.welcome_register, reply_markup=markup)
     elif call_data == TEXT.reregister_by_number:
         print("02")
@@ -392,8 +279,8 @@ def register(call):
     elif call_data == TEXT.register_commerce:
         print("05")
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
-        addButton(markup, REGISTER_ACTION, TEXT.register_commerce_im_shure)
-        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_commerce_im_shure)
+        tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, TEXT.welcome_register_company,
                          reply_markup=markup)
         pass
@@ -408,15 +295,15 @@ def register(call):
         flat_id = d[0].split(': ')[1]
         floor = d[1].split(': ')[1]
         markup = tg.types.InlineKeyboardMarkup()
-        addButton(markup, REGISTER_ACTION, TEXT.register_by_number_confirm.format(flat_id, floor))
-        addButton(markup, REGISTER_ACTION, TEXT.register_by_number_cancel)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_by_number_confirm.format(flat_id, floor))
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_by_number_cancel)
         bot.send_message(tg_id, TEXT.welcome_register_flat_confirm.format(flat_id, floor), reply_markup=markup)
     elif call_data.split(':')[0] == TEXT.register_by_number_confirm.split(':')[0]:
         print("012")
         d = call.data.split(' на ')
         flat_id = d[0].split(': ')[1]
         floor = d[1].split(': ')[1]
-        add_user(tg_id, tg_chat_id, get_id_from_text(flat_id), get_id_from_text(floor))
+        add_user(tg_id, tg_chat_id, tgf.get_id_from_text(flat_id), tgf.get_id_from_text(floor))
         start(call)
     elif call_data == TEXT.register_approve:
         print("07")
@@ -436,16 +323,16 @@ def register(call):
     elif call_data == TEXT.register_living_close:
         print("091")
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
-        addButton(markup, REGISTER_ACTION, TEXT.register_living_close_im_shure)
-        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_living_close_im_shure)
+        tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, "Вы указали, что живёте рядом с ЖК Халькон. Верно? ⤵️",
                          reply_markup=markup)
         pass
     elif call_data == TEXT.register_interested:
         print("081")
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
-        addButton(markup, REGISTER_ACTION, TEXT.register_interested_im_shure)
-        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_interested_im_shure)
+        tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id,
                          "Вы указали, что не имеете никакого отношения к ЖК Халькон, а только интересуетесь. Верно? ⤵️",
                          reply_markup=markup)
@@ -467,9 +354,9 @@ def register(call):
     pass
 
 
-@bot.callback_query_handler(func=lambda call: getCallbackAction(call) == NEWUSER_ACTION)
+@bot.callback_query_handler(func=lambda call: tgf.getCallbackAction(call) == NEWUSER_ACTION)
 def new_user(call):
-    call_data = getCallbackData(call)
+    call_data = tgf.getCallbackData(call)
     tg_id = call.from_user.id
     message_chat_id = call.message.chat.id
     log.info('%s in "new_user" with "%s"', tg_id, call_data)
@@ -489,26 +376,30 @@ def new_user(call):
             if registered_user.flat_id == BAN:
                 message_text = 'Спасибо! Кто-то из соседей уже заблокировал этого человека'
             bot.send_message(message_chat_id, message_text)
-        elif tg_id not in get_admins_ids(chat_id):
+        elif tg_id not in tgf.get_admins_ids(bot, chat_id):
             new_markup = old_markup
             bot.send_message(message_chat_id,
                              'Для подтверждения соседей у вас должно быть указано "собственник в ЖК" в закрытом чате.')
         elif call_data_command == TEXT.newuser_confirm:
             bot.send_message(message_chat_id, 'Вы знакомы и можете подтвердить, что это действительно новый сосед?')
-            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel, '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
-            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_confirm_shure,
-                      '{}:{}'.format(TEXT.newuser_confirm_shure, user_tg_id))
+            tgf.addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel,
+                          '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
+            tgf.addButton(buttons, NEWUSER_ACTION, TEXT.newuser_confirm_shure,
+                          '{}:{}'.format(TEXT.newuser_confirm_shure, user_tg_id))
             new_markup.add(*buttons)
         elif call_data_command == TEXT.newuser_ban:
             bot.send_message(message_chat_id,
                              'Вы уверены, что этот человек на самом деле не имеет отношения к указанной квартире и его необходимо заблокировать?')
-            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel, '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
-            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_ban_shure,
-                      '{}:{}'.format(TEXT.newuser_ban_shure, user_tg_id))
+            tgf.addButton(buttons, NEWUSER_ACTION, TEXT.newuser_cancel,
+                          '{}:{}'.format(TEXT.newuser_cancel, user_tg_id))
+            tgf.addButton(buttons, NEWUSER_ACTION, TEXT.newuser_ban_shure,
+                          '{}:{}'.format(TEXT.newuser_ban_shure, user_tg_id))
             new_markup.add(*buttons)
         elif call_data_command == TEXT.newuser_cancel:
-            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_confirm, '{}:{}'.format(TEXT.newuser_confirm, user_tg_id))
-            addButton(buttons, NEWUSER_ACTION, TEXT.newuser_ban, '{}:{}'.format(TEXT.newuser_ban, user_tg_id))
+            tgf.addButton(buttons, NEWUSER_ACTION, TEXT.newuser_confirm,
+                          '{}:{}'.format(TEXT.newuser_confirm, user_tg_id))
+            tgf.addButton(buttons, NEWUSER_ACTION, TEXT.newuser_ban,
+                          '{}:{}'.format(TEXT.newuser_ban, user_tg_id))
             new_markup.add(*buttons)
         elif call_data_command == TEXT.newuser_confirm_shure:
             print("подтверждение уверен")
@@ -530,9 +421,9 @@ def new_user(call):
     bot.edit_message_reply_markup(message_chat_id, call.message.id, reply_markup=new_markup)
 
 
-@bot.callback_query_handler(func=lambda call: getCallbackAction(call) == NEIGHBORS_ACTION)
+@bot.callback_query_handler(func=lambda call: tgf.getCallbackAction(call) == NEIGHBORS_ACTION)
 def neighbors(call):
-    call_data = getCallbackData(call)
+    call_data = tgf.getCallbackData(call)
     tg_id = call.from_user.id
     log.info('%s in "neighbors" with "%s"', tg_id, call_data)
     bot.send_chat_action(tg_id, 'typing')
@@ -587,12 +478,12 @@ def neighbors(call):
         markup.add(*buttons)
     else:
         if call_data not in (TEXT.get_house_commerce, TEXT.get_entrance_neighbors):
-            addButton(markup, NEIGHBORS_ACTION, TEXT.get_entrance_neighbors)
+            tgf.addButton(markup, NEIGHBORS_ACTION, TEXT.get_entrance_neighbors)
         elif call_data != TEXT.get_house_commerce:
-            addButton(markup, NEIGHBORS_ACTION, TEXT.get_all_neighbors)
+            tgf.addButton(markup, NEIGHBORS_ACTION, TEXT.get_all_neighbors)
         message_text = TEXT.neighbors_not_found
-    addButton(markup, GENERAL_ACTION, TEXT.main_menu)
-    send_user_info_wrapper(tg_id, message_text, markup)
+    tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+    tgf.send_user_info_wrapper(bot, tg_id, message_text, markup, service_chat_id=config['BOT']['servicechatid'])
 
 
 def forward_from_user_to_chat(message, to_chat_id, text_to_chat, text_to_user):
@@ -653,9 +544,9 @@ def send_post(message):
     start(message)
 
 
-@bot.callback_query_handler(func=lambda call: getCallbackAction(call) == ADVERT_ACTION)
+@bot.callback_query_handler(func=lambda call: tgf.getCallbackAction(call) == ADVERT_ACTION)
 def advert(call):
-    call_data = getCallbackData(call)
+    call_data = tgf.getCallbackData(call)
     tg_id = call.from_user.id
     log.info('%s in "advert" with "%s"', tg_id, call_data)
     bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
@@ -679,9 +570,9 @@ def advert(call):
         bot.send_message(tg_id, TEXT.error.format('advert'))
 
 
-@bot.callback_query_handler(func=lambda call: getCallbackAction(call) == GENERAL_ACTION)
+@bot.callback_query_handler(func=lambda call: tgf.getCallbackAction(call) == GENERAL_ACTION)
 def general(call):
-    call_data = getCallbackData(call)
+    call_data = tgf.getCallbackData(call)
     tg_id = call.from_user.id
     log.info('%s in "general" with "%s"', tg_id, call_data)
     if call_data == TEXT.main_menu:
@@ -698,11 +589,11 @@ def general(call):
         '''
         bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
-        addButton(markup, REGISTER_ACTION, TEXT.register_approve)
-        addButton(markup, REGISTER_ACTION, TEXT.register_cancel)
-        addButton(markup, REGISTER_ACTION, TEXT.register_ban)
-        addButton(markup, NEIGHBORS_ACTION, TEXT.get_all_neighbors)
-        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_approve)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_cancel)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_ban)
+        tgf.addButton(markup, NEIGHBORS_ACTION, TEXT.get_all_neighbors)
+        tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, 'Доступные действия ⤵️', reply_markup=markup)
     elif call_data == TEXT.get_neighbors:
         '''меню поиска соседей
@@ -712,12 +603,12 @@ def general(call):
         registered_user_flat = flats.Flat.findByPerson(flats.getAllHouseFlats(house_dict), tg_id)
         if registered_user_flat:
             if registered_user_flat.up_residents:
-                addButton(markup, NEIGHBORS_ACTION, TEXT.get_up_neighbors)
-            addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
+                tgf.addButton(markup, NEIGHBORS_ACTION, TEXT.get_up_neighbors)
+            tgf.addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
             if registered_user_flat.down_residents:
-                addButton(markup, NEIGHBORS_ACTION, TEXT.get_down_neighbors)
-            addButton(markup, NEIGHBORS_ACTION, TEXT.get_entrance_neighbors)
-        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+                tgf.addButton(markup, NEIGHBORS_ACTION, TEXT.get_down_neighbors)
+            tgf.addButton(markup, NEIGHBORS_ACTION, TEXT.get_entrance_neighbors)
+        tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, 'Доступные действия ⤵️', reply_markup=markup)
     elif call_data == TEXT.statistics:
         '''статистика по боту
@@ -738,7 +629,7 @@ def general(call):
                 message_text += '\n{} - {} человек из {} квартир'.format(entrance, len(res_list), flats_counter)
         bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
-        addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         bot.send_message(tg_id, message_text, reply_markup=markup)
     else:
         print("WTF general WTF")
@@ -791,7 +682,7 @@ def start(message):
 
         # проверка на админство в чате (для присвоения статуса проверенного в случае установки человеком)
         if registered_user.status_id == 0:
-            if registered_user.id in get_admins_ids(chat_id):
+            if registered_user.id in tgf.get_admins_ids(bot, chat_id):
                 promote_user(registered_user.id, config['BOT']['adminid'])
 
         if registered_user.status_id >= 0:
@@ -816,42 +707,42 @@ def start(message):
                     ''' указал только номер этажа и парадную
                     '''
                     text_for_message = "👋 Вы не указали квартиру. Доступные действия ⤵️"
-                    addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
-                    addButton(markup, REGISTER_ACTION, TEXT.reregister_by_number)
+                    tgf.addButton(markup, NEIGHBORS_ACTION, TEXT.get_floor_neighbors)
+                    tgf.addButton(markup, REGISTER_ACTION, TEXT.reregister_by_number)
                 else:
                     ''' указал номер квартиры
                     '''
                     text_for_message = TEXT.welcome_flat.format(registered_user.flat_id)
-                    addButton(markup, GENERAL_ACTION, TEXT.get_neighbors)
+                    tgf.addButton(markup, GENERAL_ACTION, TEXT.get_neighbors)
                 pass
         if registered_user.status_id >= 1:
             ''' подтверждённый пользователь
             '''
             print(2)
-            addButton(markup, ADVERT_ACTION, TEXT.make_post)
-            if registered_user.id not in get_admins_ids(chat_id):  # ToDO проверка на случай входа в чат после подтверждения человеком
-                set_admin_in_chat(registered_user, chat_id)
+            tgf.addButton(markup, ADVERT_ACTION, TEXT.make_post)
+            if registered_user.id not in tgf.get_admins_ids(bot, chat_id):  # ToDO проверка на случай входа в чат после подтверждения человеком
+                tgf.set_admin_in_chat(bot, registered_user, chat_id)
             pass
         if str(registered_user.id) == str(config['BOT']['adminid']):
             print('admin')
-            addButton(markup, GENERAL_ACTION, TEXT.admin_actions)
+            tgf.addButton(markup, GENERAL_ACTION, TEXT.admin_actions)
             pass
         if registered_user.flat_id not in (CLOSELIVING, INTERESTED):
             '''кроме не относящихся к дому'''
-            addButton(markup, GENERAL_ACTION, TEXT.statistics)
-            addButton(markup, GENERAL_ACTION, TEXT.get_yk_contact)
+            tgf.addButton(markup, GENERAL_ACTION, TEXT.statistics)
+            tgf.addButton(markup, GENERAL_ACTION, TEXT.get_yk_contact)
         else:
             pass  # TODO добавить возможность переехать в наш ЖК
-        addButton(markup, NEIGHBORS_ACTION, TEXT.get_house_commerce)
+        tgf.addButton(markup, NEIGHBORS_ACTION, TEXT.get_house_commerce)
     else:
         ''' новый пользователь, ранее не регистрировался и не попадал в список
         '''
         print(-1)
         text_for_message = TEXT.welcome_first
-        addButton(markup, REGISTER_ACTION, TEXT.register_start)
+        tgf.addButton(markup, REGISTER_ACTION, TEXT.register_start)
 
-    addButton(markup, ADVERT_ACTION, TEXT.make_advert)
-    addButton(markup, ADVERT_ACTION, TEXT.todo_for_bot)
+    tgf.addButton(markup, ADVERT_ACTION, TEXT.make_advert)
+    tgf.addButton(markup, ADVERT_ACTION, TEXT.todo_for_bot)
     bot.send_message(tg_id, text_for_message, reply_markup=markup)
 
 
