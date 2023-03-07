@@ -241,6 +241,36 @@ def getAllHouseResidents(house_dict):
     return res_list
 
 
+def get_text_statistics(house_dict):
+    start_text = 'На данный момент зарегестрировались в боте:'
+    message_text = ''
+    total_flats_counter = 0
+    for entrance in house_dict.keys():
+        res_list = []
+        flats_counter = 0
+        for f in house_dict.get(entrance):
+            if f.id and f.residents:
+                flats_counter += 1
+            res_list += f.residents
+        if res_list and entrance == COMMERCE:
+            message_text += '\n<i>{}</i> - {} представителей из <b>{}</b> компаний'.format(entrance, len(res_list),
+                                                                                           flats_counter)
+        elif res_list and entrance == OTHER:
+            message_text += '\n<i>{}</i> - {} интересующихся или живущих рядом'.format(entrance, len(res_list))
+        elif res_list:
+            total_flats_counter += flats_counter
+            message_text += '\n<b>{}</b> - <b>{}</b> человек из <b>{}</b> квартир'.format(entrance, len(res_list),
+                                                                                          flats_counter)
+    flats_percent = round(total_flats_counter / 0.72)
+    flats_percent_text = '\n\n'
+    for x in range(0, round(flats_percent * 0.1)):
+        flats_percent_text += '🟩'
+    for x in range(round(flats_percent * 0.1), 10):
+        flats_percent_text += '🔲'
+    flats_percent_text += '<b> {}%</b>\n'.format(flats_percent)
+    return start_text + flats_percent_text + message_text
+
+
 class FlatsTest(unittest.TestCase):
 
     def test_addresident(self):

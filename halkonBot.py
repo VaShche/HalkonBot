@@ -613,24 +613,11 @@ def general(call):
     elif call_data == TEXT.statistics:
         '''статистика по боту
         '''
-        message_text = 'На данный момент зарегестрировались в боте:'
-        for entrance in house_dict.keys():
-            res_list = []
-            flats_counter = 0
-            for f in house_dict.get(entrance):
-                if f.id and f.residents:
-                    flats_counter += 1
-                res_list += f.residents
-            if res_list and entrance == COMMERCE:
-                message_text += '\n{} - {} представителей из {} компаний'.format(entrance, len(res_list), flats_counter)
-            elif res_list and entrance == OTHER:
-                message_text += '\n{} - {} интересующихся или живущих рядом'.format(entrance, len(res_list))
-            elif res_list:
-                message_text += '\n{} - {} человек из {} квартир'.format(entrance, len(res_list), flats_counter)
+        message_text = flats.get_text_statistics(house_dict)
         bot.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
         tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
-        bot.send_message(tg_id, message_text, reply_markup=markup)
+        bot.send_message(tg_id, message_text, reply_markup=markup, parse_mode='HTML')
     else:
         print("WTF general WTF")
         bot.send_message(tg_id, TEXT.error.format('general'))
