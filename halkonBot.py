@@ -187,6 +187,7 @@ def promote_user(tg_id, by_tg_id, new_status=2):
         return 0
     new_resident.status_id = new_status
     new_resident.status_granted_by = by_tg_id
+    func.save_dict_to_file(data_file_path, house_dict, key=config['BOT']['cryptokey'])
     tgf.set_admin_in_chat(bot, new_resident, chat_id)
     bot.send_message(by_tg_id, "Спасибо!")
     bot.send_message(new_resident.id,
@@ -522,7 +523,7 @@ def send_post(message):
     message_text = '''
 ———
 {} {}'''.format(message.from_user.first_name, last_name)
-    result = '✅ Сообщение отправлено в @Halvon_SPb'
+    result = '✅ Сообщение отправлено в @Halkon_SPb'
     if message.content_type == 'text':
         if len(message.text) < 3:
             result = '❌ Сообщение не может быть короче трёх символов.'

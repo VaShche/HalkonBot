@@ -21,7 +21,7 @@ def set_admin_in_chat(bot, resident_for_promote, chat_id_for_promote):
         bot.set_chat_administrator_custom_title(chat_id_for_promote, resident_for_promote.id,
                                                 resident_for_promote.statuses.get(resident_for_promote.status_id))
     except Exception:
-        log.error('error at bot.promote in promote_user')
+        log.error('error at bot.promote in set_admin_in_chat')
 
 
 def actionCallbackData(action, data):
