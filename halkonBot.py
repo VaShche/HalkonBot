@@ -185,8 +185,7 @@ def promote_user(tg_id, by_tg_id, new_status=2):
         log.error('user not exist in promote_user')
         BOT.send_message(CONFIG['BOT']['servicechatid'], 'error')
         return 0
-    new_resident.status_id = new_status
-    new_resident.status_granted_by = by_tg_id
+    new_resident.setStatus(new_status, by_tg_id)
     func.save_dict_to_file(DATA_FILE_PATH, HOUSE_DICT, key=CONFIG['BOT']['cryptokey'])
     tgf.set_admin_in_chat(BOT, new_resident, CHAT_ID)
     BOT.send_message(by_tg_id, "Спасибо!")
