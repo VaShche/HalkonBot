@@ -30,9 +30,9 @@ class Resident(object):
         self.status_granted_by = by
 
     def getStatus(self):
-        status_text = self.statuses.get(self.chat_id)
+        status_text = self.statuses.get(self.status_id)
         if self.show_flat_id:
-            status_text.replace(' в ЖК', ' {}й'.format(self.flat_id))
+            status_text = status_text.replace(' в ЖК', ' {}й'.format(self.flat_id))
         return status_text
 
     def __str__(self):
