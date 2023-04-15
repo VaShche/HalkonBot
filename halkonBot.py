@@ -586,9 +586,9 @@ def user_settings(call):
             func.save_dict_to_file(DATA_FILE_PATH, HOUSE_DICT, key=CONFIG['BOT']['cryptokey'])
             BOT.send_message(tg_id,
                              'Теперь в закрытом чате у Вас указан статус "{}".'.format(registered_user.getStatus()))
-        except Exception:
-            log.error('error at user_settings in flat_id_hide or show')
-            BOT.send_message(tg_id, 'Что-то пошло не так, сообщите пожалуйста автору бота')
+        except Exception as ex:
+            log.error('error at user_settings in flat_id_hide or show: {}'.format(ex))
+            BOT.send_message(tg_id, 'Что-то пошло не так, сообщите пожалуйста автору бота: {}'.format(ex))
     if call_data in (TEXT.flat_id_hide, TEXT.flat_id_show, TEXT.settings_menu):
         '''меню настроек
         '''
@@ -775,3 +775,15 @@ def bot_runner():
 
 t = threading.Thread(target=bot_runner)
 t.start()
+
+
+print("---")
+residents_list_for_update = flats.getAllHouseResidents(HOUSE_DICT)
+for user_tg_id in residents_list_for_update:
+    if user_tg_id not in [5105104114]:
+        registered_user = flats.Resident.findByTgID(residents_list_for_update, user_tg_id)
+        if registered_user.status_id > 1:
+            try:
+                BOT.set_chat_administrator_custom_title(CHAT_ID, user_tg_id, registered_user.getStatus())
+            except Exception as ex:
+                log.error('%s in "---"', ex)
