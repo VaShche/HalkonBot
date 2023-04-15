@@ -7,11 +7,14 @@ class Resident(object):
     id = None
     chat_id = None
     status_id = None
-    statuses = {0: "не подтверждён", 1: "живёт в ЖК", 2: "собственник в ЖК"}
+    statuses = {0: "не подтверждён",
+                1: "живёт в ЖК",
+                2: "собственник в ЖК"}
     flat_id = None
     status_granted_by = None
     adding_user_id = None
     adding_user_flat_id = None
+    show_flat_id = True
 
     def __init__(self, tg_id, chat_id, flat_id=None):
         self.id = tg_id
@@ -20,10 +23,17 @@ class Resident(object):
         self.status_id = 0
         self.adding_user_id = None
         self.adding_user_flat_id = None
+        self.show_flat_id = True
 
     def setStatus(self, status_id, by):
         self.status_id = status_id
         self.status_granted_by = by
+
+    def getStatus(self):
+        status_text = self.statuses.get(self.chat_id)
+        if self.show_flat_id:
+            status_text.replace(' в ЖК', ' {}й'.format(self.flat_id))
+        return status_text
 
     def __str__(self):
         return '{0} - {1} in {2} ({3})'.format(self.id, self.statuses.get(self.status_id),

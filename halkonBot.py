@@ -570,6 +570,38 @@ def advert(call):
         BOT.send_message(tg_id, TEXT.error.format('advert'))
 
 
+@BOT.callback_query_handler(func=lambda call: tgf.getCallbackAction(call) == SETTINGS_ACTION)
+def user_settings(call):
+    call_data = tgf.getCallbackData(call)
+    tg_id = call.from_user.id
+    log.info('%s in "user_settings" with "%s"', tg_id, call_data)
+    registered_user = flats.Resident.findByTgID(flats.getAllHouseResidents(HOUSE_DICT), tg_id)
+    BOT.edit_message_reply_markup(tg_id, call.message.id, reply_markup=None)
+    if call_data in (TEXT.flat_id_hide, TEXT.flat_id_show):
+        '''изменение отображения настроек
+        '''
+        registered_user.show_flat_id = not registered_user.show_flat_id
+        try:
+            BOT.set_chat_administrator_custom_title(CHAT_ID, tg_id, registered_user.getStatus())
+            func.save_dict_to_file(DATA_FILE_PATH, HOUSE_DICT, key=CONFIG['BOT']['cryptokey'])
+            BOT.send_message(tg_id,
+                             'Теперь в закрытом чате у Вас указан статус "{}".'.format(registered_user.getStatus()))
+        except Exception:
+            log.error('error at user_settings in flat_id_hide or show')
+            BOT.send_message(tg_id, 'Что-то пошло не так, сообщите пожалуйста автору бота')
+    if call_data in (TEXT.flat_id_hide, TEXT.flat_id_show, TEXT.settings_menu):
+        '''меню настроек
+        '''
+        markup = tg.types.InlineKeyboardMarkup(row_width=1)
+        if registered_user.show_flat_id:  # управление отображением номера квартиры
+            tgf.addButton(markup, SETTINGS_ACTION, TEXT.flat_id_hide)
+        else:
+            tgf.addButton(markup, SETTINGS_ACTION, TEXT.flat_id_show)
+
+        tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
+        BOT.send_message(tg_id, 'Доступные действия ⤵️', reply_markup=markup)
+
+
 @BOT.callback_query_handler(func=lambda call: tgf.getCallbackAction(call) == GENERAL_ACTION)
 def general(call):
     call_data = tgf.getCallbackData(call)
@@ -709,7 +741,7 @@ def start(message):
             tgf.addButton(markup, ADVERT_ACTION, TEXT.make_post)
             if registered_user.id not in tgf.get_admins_ids(BOT, CHAT_ID):  # ToDO проверка на случай входа в чат после подтверждения человеком
                 tgf.set_admin_in_chat(BOT, registered_user, CHAT_ID)
-            pass
+            tgf.addButton(markup, SETTINGS_ACTION, TEXT.settings_menu)
         if str(registered_user.id) == str(CONFIG['BOT']['adminid']):
             print('admin')
             tgf.addButton(markup, GENERAL_ACTION, TEXT.admin_actions)

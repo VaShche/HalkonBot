@@ -19,7 +19,7 @@ def set_admin_in_chat(bot, resident_for_promote, chat_id_for_promote):
                                 can_pin_messages=True, can_manage_chat=False, can_promote_members=False,
                                 can_manage_video_chats=True, can_manage_voice_chats=True, can_manage_topics=False)
         bot.set_chat_administrator_custom_title(chat_id_for_promote, resident_for_promote.id,
-                                                resident_for_promote.statuses.get(resident_for_promote.status_id))
+                                                resident_for_promote.getStatus())
     except Exception:
         log.error('error at bot.promote in set_admin_in_chat')
 
