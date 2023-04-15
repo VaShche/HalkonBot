@@ -20,8 +20,8 @@ def set_admin_in_chat(bot, resident_for_promote, chat_id_for_promote):
                                 can_manage_video_chats=True, can_manage_voice_chats=True, can_manage_topics=False)
         bot.set_chat_administrator_custom_title(chat_id_for_promote, resident_for_promote.id,
                                                 resident_for_promote.getStatus())
-    except Exception:
-        log.error('error at bot.promote in set_admin_in_chat')
+    except Exception as ex:
+        log.error('error at bot.promote in set_admin_in_chat: %s', ex)
 
 
 def actionCallbackData(action, data):
