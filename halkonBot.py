@@ -780,16 +780,13 @@ t.start()
 print("---")
 residents_list_for_update = flats.getAllHouseResidents(HOUSE_DICT)
 print(len(residents_list_for_update))
-for user_tg_id in residents_list_for_update:
-    if user_tg_id not in [5105104114]:
-        registered_user = flats.Resident.findByTgID(residents_list_for_update, user_tg_id)
-        if registered_user:
-            if registered_user.status_id > 1:
-                try:
-                    BOT.set_chat_administrator_custom_title(CHAT_ID, user_tg_id, registered_user.getStatus())
-                    print('{} {}'.format(user_tg_id, registered_user.getStatus()))
-                    log.info('%s %s', user_tg_id, registered_user.getStatus())
-                except Exception as ex:
-                    log.error('%s in "---"', ex)
-            else:
-                log.error('%s WTF', user_tg_id)
+for registered_user in residents_list_for_update:
+    if registered_user.id not in [5105104114]:
+        if registered_user.status_id > 1:
+            try:
+                BOT.set_chat_administrator_custom_title(CHAT_ID, registered_user.id, registered_user.getStatus())
+                log.info('%s %s', registered_user.id, registered_user.getStatus())
+            except Exception as ex:
+                log.error('%s in "---"', ex)
+        else:
+            log.error('%s scip', registered_user.id)
