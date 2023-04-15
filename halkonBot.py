@@ -778,15 +778,3 @@ t.start()
 
 
 print("---")
-residents_list_for_update = flats.getAllHouseResidents(HOUSE_DICT)
-print(len(residents_list_for_update))
-for registered_user in residents_list_for_update:
-    if registered_user.id not in [5105104114]:
-        if registered_user.status_id > 1:
-            try:
-                log.info('%s %s', registered_user.id, registered_user.getStatus())
-                tgf.set_admin_in_chat(BOT, registered_user, CHAT_ID)
-            except Exception as ex:
-                log.error('%s in "---"', ex)
-        else:
-            log.error('%s scip', registered_user.id)
