@@ -235,6 +235,10 @@ def getHalkonFlatsStruct():
     halkon_flats[entrance] = [Flat(BAN, entrance, 1), Flat(INTERESTED, entrance, 1), Flat(CLOSELIVING, entrance, 1)]
     return halkon_flats
 
+def getVOkvartalStruct():
+    vok_flats = dict()
+    # TODO
+    return vok_flats
 
 def getAllHouseFlats(house_dict):
     flats_list = []

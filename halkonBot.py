@@ -124,7 +124,7 @@ def register_another_user(message):
         if another_tg_id:
             from_user_person.adding_user_id = another_tg_id
             print(another_tg_id)
-            BOT.send_message(tg_id, 'Напишите квартиру <a href="tg://user?id={}">человека</a> в ЖК Халькон (числом)'.format(another_tg_id), parse_mode='HTML')
+            BOT.send_message(tg_id, 'Напишите квартиру <a href="tg://user?id={}">человека</a> в {} (числом)'.format(another_tg_id, TEXT.zk_name), parse_mode='HTML')
             BOT.register_next_step_handler(message, register_another_user)
         else:
             BOT.send_message(tg_id, TEXT.unsuccessful)
@@ -325,7 +325,7 @@ def register(call):
         markup = tg.types.InlineKeyboardMarkup(row_width=1)
         tgf.addButton(markup, REGISTER_ACTION, TEXT.register_living_close_im_shure)
         tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
-        BOT.send_message(tg_id, "Вы указали, что живёте рядом с ЖК Халькон. Верно? ⤵️",
+        BOT.send_message(tg_id, "Вы указали, что живёте рядом с {}. Верно? ⤵️".format(TEXT.zk_name),
                          reply_markup=markup)
         pass
     elif call_data == TEXT.register_interested:
@@ -334,7 +334,7 @@ def register(call):
         tgf.addButton(markup, REGISTER_ACTION, TEXT.register_interested_im_shure)
         tgf.addButton(markup, GENERAL_ACTION, TEXT.main_menu)
         BOT.send_message(tg_id,
-                         "Вы указали, что не имеете никакого отношения к ЖК Халькон, а только интересуетесь. Верно? ⤵️",
+                         "Вы указали, что не имеете никакого отношения к {}, а только интересуетесь. Верно? ⤵️".format(TEXT.zk_name),
                          reply_markup=markup)
         pass
     elif call_data == TEXT.register_living_close_im_shure:
@@ -503,7 +503,7 @@ def forward_from_user_to_chat(message, to_chat_id, text_to_chat, text_to_user):
 def send_advert(message):
     forward_from_user_to_chat(message, CONFIG['BOT']['servicechatid'],
                               'Объявление на модерацию для канала:',
-                              '✅ Сообщение отправлено на модерацию. После неё оно будет опубликовано в @Halkon_SPb')
+                              '✅ Сообщение отправлено на модерацию. После неё оно будет опубликовано в {}'.format(TEXT.channel_name))
     # TODO оплата для тех кто не собственник в ЖК
 
 
@@ -522,7 +522,7 @@ def send_post(message):
     message_text = '''
 ———
 {} {}'''.format(message.from_user.first_name, last_name)
-    result = '✅ Сообщение отправлено в @Halkon_SPb'
+    result = '✅ Сообщение отправлено в {}'.format(TEXT.channel_name)
     if message.content_type == 'text':
         if len(message.text) < 3:
             result = '❌ Сообщение не может быть короче трёх символов.'
@@ -553,7 +553,7 @@ def advert(call):
     if call_data == TEXT.make_advert:
         '''объявление на модерацию
         '''
-        BOT.send_message(tg_id, 'Отправьте пожалуйста объявление одним сообщением. После модерации оно будет перенаправлено в @Halkon_SPb.\nДля отмены отправьте любую букву.')
+        BOT.send_message(tg_id, 'Отправьте пожалуйста объявление одним сообщением. После модерации оно будет перенаправлено в {}.\nДля отмены отправьте любую букву.'.format(TEXT.channel_name))
         BOT.register_next_step_handler(call.message, send_advert)
     elif call_data == TEXT.todo_for_bot:
         '''обратная связь
@@ -563,7 +563,7 @@ def advert(call):
     elif call_data == TEXT.make_post:
         '''сообщение от проверенного в канал
         '''
-        BOT.send_message(tg_id, 'Напишите пожалуйста ваше сообщение. Оно будет опубликовано от имени канала в @Halkon_SPb. Ваше имя будет добавлено в подпись к сообщению.\nДля отмены отправьте любую букву.')
+        BOT.send_message(tg_id, 'Напишите пожалуйста ваше сообщение. Оно будет опубликовано от имени бота в {}.\nДля отмены отправьте любую букву.'.format(TEXT.channel_name))
         BOT.register_next_step_handler(call.message, send_post)
     else:
         print("WTF advert WTF")
