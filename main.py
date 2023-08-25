@@ -6,7 +6,7 @@ import pip
 import datetime
 today = datetime.date.today()
 import logging as log
-log.basicConfig(filename='{}_{}_halkon.log'.format(today.year, today.month),
+log.basicConfig(filename='{}_{}_bot.log'.format(today.year, today.month),
                 format='%(asctime)s %(levelname)s %(message)s',
                 encoding='utf-8', level=log.INFO)
 
