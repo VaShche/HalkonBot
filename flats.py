@@ -245,7 +245,12 @@ def getVOkvartalStruct():
     vok_flats[entrance] = getFlatsAtEntranceStruct(entrance, 99, 146, first_floor=4, flats_count=6)
     entrance = 'Парадная №4'
     vok_flats[entrance] = getFlatsAtEntranceStruct(entrance, 147, 184, first_floor=4, flats_count=7)
-    # TODO
+    '''коммерция'''
+    entrance = COMMERCE
+    vok_flats[entrance] = [Flat(None, entrance, 1)]
+    '''окружающие'''
+    entrance = OTHER
+    vok_flats[entrance] = [Flat(BAN, entrance, 1), Flat(INTERESTED, entrance, 1), Flat(CLOSELIVING, entrance, 1)]
     return vok_flats
 
 def getAllHouseFlats(house_dict):
