@@ -237,6 +237,14 @@ def getHalkonFlatsStruct():
 
 def getVOkvartalStruct():
     vok_flats = dict()
+    entrance = 'Парадная №1'
+    vok_flats[entrance] = getFlatsAtEntranceStruct(entrance, 1, 48, first_floor=4, flats_count=6)
+    entrance = 'Парадная №2'
+    vok_flats[entrance] = getFlatsAtEntranceStruct(entrance, 49, 98, first_floor=4, flats_count=7)
+    entrance = 'Парадная №3'
+    vok_flats[entrance] = getFlatsAtEntranceStruct(entrance, 99, 146, first_floor=4, flats_count=6)
+    entrance = 'Парадная №4'
+    vok_flats[entrance] = getFlatsAtEntranceStruct(entrance, 147, 184, first_floor=4, flats_count=7)
     # TODO
     return vok_flats
 
