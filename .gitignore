@@ -1,1 +1,8 @@
 /settings.ini
+*.pyc
+*.data
+*.log
+*.lock
+*.toml
+*replit*
+/venv/*
