@@ -519,9 +519,12 @@ def send_post(message):
     last_name = ''
     if message.from_user.last_name:
         last_name = message.from_user.last_name
-    message_text = '''
+    message_text = ''
+    """
+    '''
 ———
 {} {}'''.format(message.from_user.first_name, last_name)
+    """
     result = '✅ Сообщение отправлено в {}'.format(TEXT.channel_name)
     if message.content_type == 'text':
         if len(message.text) < 3:
